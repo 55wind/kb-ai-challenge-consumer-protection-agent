@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+faiss-cpu
+sentence-transformers
+kiwipiepy
+rank-bm25
+pypdf
+olefile
+pytest
+sse-starlette

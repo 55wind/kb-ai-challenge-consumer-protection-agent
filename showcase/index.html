@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>금융 소비자 보호 에이전트 — 제8회 KB AI Challenge</title>
+<meta name="description" content="실제 금감원 결정례·법령에 근거해 탐지하고, 전망하고, 행동까지 돕는 완전 로컬 sLLM 에이전트" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  :root {
+    --brand: #ffbc00; --brand-strong: #f2a900; --brand-weak: #fff3cc; --brand-ink: #8a6a00;
+    --grey-900: #26241f; --grey-700: #55504a; --grey-500: #8b857c;
+    --grey-200: #e8e4dc; --grey-100: #f3f1ec; --grey-50: #f9f8f5; --white: #fff;
+    --radius-xl: 16px; --radius-3xl: 24px; --radius-full: 999px;
+    --shadow: 0 12px 32px rgba(21,18,12,.10), 0 2px 6px rgba(21,18,12,.06);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: var(--grey-900); background: var(--white); font-size: 15px; line-height: 1.6;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 96px 0 64px; text-align: center; }
+  .badge {
+    display: inline-block; background: var(--grey-900); color: var(--brand);
+    border-radius: var(--radius-full); padding: 7px 18px; font-size: 13px; font-weight: 700;
+    margin-bottom: 24px; letter-spacing: -0.01em;
+  }
+  h1 { font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 18px; }
+  h1 .y { background: linear-gradient(transparent 62%, var(--brand) 62%); }
+  .sub { font-size: 18px; color: var(--grey-700); max-width: 620px; margin: 0 auto; }
+  .cycle {
+    display: flex; gap: 8px; justify-content: center; margin-top: 28px; flex-wrap: wrap;
+    font-weight: 700; font-size: 15px;
+  }
+  .cycle span { background: var(--brand-weak); color: var(--grey-900); border-radius: var(--radius-full); padding: 8px 20px; }
+  .cycle em { color: var(--grey-500); font-style: normal; align-self: center; }
+
+  section { padding: 56px 0; }
+  section.alt { background: var(--grey-50); }
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .lead { color: var(--grey-700); margin-bottom: 32px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--white); border: 1px solid var(--grey-200);
+    border-radius: var(--radius-3xl); padding: 28px;
+  }
+  .card .ico { font-size: 28px; margin-bottom: 12px; }
+  .card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .card p { font-size: 14px; color: var(--grey-700); }
+
+  .feature { display: grid; grid-template-columns: 1fr 1.4fr; gap: 32px; align-items: center; margin-bottom: 64px; }
+  .feature:nth-child(even) .txt { order: 2; }
+  .feature .txt h3 { font-size: 21px; font-weight: 800; letter-spacing: -0.015em; margin-bottom: 10px; }
+  .feature .txt p { color: var(--grey-700); font-size: 15px; margin-bottom: 10px; }
+  .feature .txt .pt { font-size: 13px; color: var(--brand-ink); font-weight: 700; }
+  .feature img {
+    width: 100%; border-radius: var(--radius-xl); border: 1px solid var(--grey-200);
+    box-shadow: var(--shadow);
+  }
+
+  .nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .num {
+    background: var(--white); border: 1px solid var(--grey-200); border-radius: var(--radius-xl);
+    padding: 22px; text-align: center;
+  }
+  .num b { display: block; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .num span { font-size: 13px; color: var(--grey-700); }
+
+  .arch {
+    background: var(--grey-900); color: #e9e6df; border-radius: var(--radius-3xl);
+    padding: 28px 32px; font-family: ui-monospace, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.8; overflow-x: auto; white-space: pre;
+  }
+  .arch .hl { color: var(--brand); font-weight: 700; }
+
+  footer { padding: 48px 0 64px; border-top: 1px solid var(--grey-200); font-size: 13px; color: var(--grey-500); }
+  footer p { margin-bottom: 6px; }
+  @media (max-width: 720px) {
+    h1 { font-size: 32px; }
+    .feature { grid-template-columns: 1fr; }
+    .feature:nth-child(even) .txt { order: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="badge">제8회 KB AI Challenge · 현직자 Pick — 금융 소비자 보호 에이전트</div>
+  <h1>권익침해를 <span class="y">탐지</span>하고,<br/>승산을 <span class="y">보여주고</span>, 행동으로 <span class="y">옮겨줍니다</span></h1>
+  <p class="sub">실제 금융감독원 분쟁조정 결정례와 법령에만 근거해 답하는 완전 로컬 sLLM 에이전트.
+  상담 내용은 단 한 글자도 밖으로 나가지 않아요.</p>
+  <div class="cycle">
+    <span>예방 — 검진</span><em>→</em><span>대응 — 골든타임</span><em>→</em><span>구제 — 증거 · 신청서</span>
+  </div>
+</header>
+
+<section class="alt">
+  <div class="wrap">
+    <h2>세 가지 약속</h2>
+    <p class="lead">금융 도메인에서 신뢰는 기능보다 먼저입니다.</p>
+    <div class="cards">
+      <div class="card"><div class="ico">📜</div><h3>100% 실제 데이터</h3>
+        <p>금감원 분쟁조정 결정례 98건, 금소법·통신사기피해환급법 등 217개 조문, FINE 금융용어사전 534개. 가상·합성 사례는 스키마 차원에서 차단됩니다 — 출처 없는 데이터는 코퍼스에 들어올 수 없어요.</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>완전 로컬 추론</h3>
+        <p>EXAONE 3.5 (2.4B)를 Ollama로 CPU에서 직접 구동합니다. 민원 속 개인 금융정보가 외부 API로 전송되지 않는 것이 기능이자 아키텍처예요.</p></div>
+      <div class="card"><div class="ico">🎯</div><h3>근거 없으면 답하지 않음</h3>
+        <p>모든 답변에 조문·사례 인용을 강제하고, 인용 없는 생성은 거부합니다. 관련도가 낮으면 추측 대신 금융감독원(1332)을 안내해요. 확률 예측은 코드로 금지했습니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>실제 구동 화면</h2>
+    <p class="lead">아래 모든 화면은 실제 시스템이 실제 데이터로 만든 결과입니다.</p>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>🎙️ 녹취록이 증거가 됩니다</h3>
+        <p>판매 상담 녹취를 붙여넣으면 직원 발언만 골라 금소법 6대 판매규제와 대조하고, <b>같은 발언이 쟁점이 된 실제 결정례</b>를 연결합니다.</p>
+        <p class="pt">"원금 보장" 발언 → 금소법 제22조 위반 의심 + 실제 인용 결정례 2건</p>
+      </div>
+      <img src="assets/02_transcript.png" alt="녹취록 증거 타임라인" loading="lazy" />
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>⏰ 골든타임 카운트다운</h3>
+        <p>사건 시기를 파악해 청약철회 7일, 위법계약해지 1년 같은 <b>법정 기한을 산술 계산</b>하고 긴급도를 표시합니다. 조문 원문으로 검증된 기한만 계산하고, 나머지는 단정하지 않아요.</p>
+        <p class="pt">보이스피싱이면 "지금 바로 지급정지" — 1분이 피해액을 좌우하니까요</p>
+      </div>
+      <img src="assets/03_goldentime.png" alt="골든타임 카드" loading="lazy" />
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>⚖️ 유사 실사례로 보는 전망</h3>
+        <p>내 상황과 비슷한 실제 조정 사례의 <b>인용/기각 분포와 결정 논거</b>를 보여줍니다. "승소 확률 87%" 같은 만들어낸 수치는 없습니다 — 사실만 서술해요. <b>기각 사례도 함께</b> 보여드립니다.</p>
+        <p class="pt">유사 사례 5건 중 인용 4건·기각 1건 · 통계적 한계 상시 고지 · 결정문 원문 링크</p>
+      </div>
+      <img src="assets/04_outlook.png" alt="유사 사례 전망" loading="lazy" />
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>📝 말하면 서류가 나옵니다</h3>
+        <p>대화에서 정리한 사실관계로 <b>분쟁조정 신청서 초안</b>을 만들고, 녹취 검진 결과가 있으면 위반 발언 타임라인을 <b>별첨 증거로 자동 삽입</b>합니다. 검진 → 증거 → 신청서가 한 세션 안에서 이어져요.</p>
+        <p class="pt">유형별 증빙서류 체크리스트 동봉 · 마크다운 다운로드</p>
+      </div>
+      <img src="assets/05_draft.png" alt="신청서 초안과 별첨" loading="lazy" />
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>🏦 담당자 콘솔</h3>
+        <p>은행 소비자보호 담당자를 위한 관리자 화면. 민원 티켓과 유형별 통계, 지식베이스 문서의 출처(KB 상품 약관 포함), 대화 로그(개인정보 마스킹 저장), 그리고 <b>모든 관리 행위의 감사 기록</b>을 한눈에 봅니다.</p>
+        <p class="pt">고객용 인스턴스에는 관리 라우트가 아예 등록되지 않습니다 — 노출면 자체가 없어요</p>
+      </div>
+      <img src="assets/06_admin.png" alt="관리자 콘솔" loading="lazy" />
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>🕸️ 근거를 연결로 — 컨텍스트 그래프</h3>
+        <p>결정례 원문이 <b>실제로 인용한 조문</b>을 정규식으로 추출해 그래프로 잇습니다. 구축에 LLM을 쓰지 않았기 때문에 엣지 하나하나의 <b>추출 근거와 원문 스니펫</b>을 그대로 확인할 수 있어요.</p>
+        <p class="pt">노드 409 · 엣지 474 (원문 인용 163) · 오추출 엣지는 사유를 남기고 비활성화</p>
+      </div>
+      <img src="assets/07_graph.png" alt="컨텍스트 그래프 탐색기와 provenance" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <h2>숫자로 보기</h2>
+    <p class="lead">&nbsp;</p>
+    <div class="nums">
+      <div class="num"><b>98건</b><span>실제 분쟁조정 결정례</span></div>
+      <div class="num"><b>217개</b><span>법령 조문 (금소법·환급법)</span></div>
+      <div class="num"><b>534개</b><span>FINE 금융용어</span></div>
+      <div class="num"><b>95%</b><span>검색 정확도 hit@5</span></div>
+      <div class="num"><b>153개</b><span>자동화 테스트</span></div>
+      <div class="num"><b>474개</b><span>컨텍스트 그래프 엣지</span></div>
+      <div class="num"><b>0건</b><span>가상·합성 사례</span></div>
+      <div class="num"><b>0회</b><span>외부 LLM API 호출</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>아키텍처</h2>
+    <p class="lead">흐름 제어는 결정론적 코드가, 이해와 생성만 sLLM이 — 작은 모델의 약점을 구조로 보완합니다.</p>
+    <div class="arch">사용자 입력
+ ├─ <span class="hl">[상담]</span> 유형 분류 → 슬롯필링 → <span class="hl">골든타임 계산</span> → 하이브리드 검색(FAISS+BM25+RRF)
+ │        → 근거 인용 답변 / 유사 실사례 전망 → 신청서 초안(+녹취 증거 별첨)
+ │             └─ 컨텍스트 그래프 1-hop 확장 → <span class="hl">🕸️ 이 답변의 근거 지도</span>
+ └─ <span class="hl">[검진]</span> 입력 자동감지(문서·문자함·녹취록) → 룰셋 1차 필터(6대 판매규제)
+          → 조문 대조 sLLM 판정 → 위험/주의/확인필요/정상 리포트
+             (대조할 조문이 0건이면 <span class="hl">판정하지 않고 "확인 필요"</span>로 물러남)
+
+로컬 스택: React(Vite) · FastAPI(SSE) · SQLite(WAL) · FAISS + BM25 · KURE-v1 임베딩
+          · <span class="hl">Ollama + EXAONE 3.5 2.4B (CPU, 외부 API 0회)</span>
+하드닝:   스레드풀 SSE · LLM 세마포어 · 서버 발급 세션 · 레이트리밋 · PII 마스킹
+          · 정적 서빙 경로 검증 · 프록시 신뢰 목록 · 관리 라우트 미등록(deny by default)</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><b>데이터 출처</b> — 금융감독원 분쟁조정결정례·절차 안내·FINE 금융용어사전, 국가법령정보센터 (금융소비자보호법 3법령, 전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법·시행령)</p>
+    <p>본 서비스의 답변은 법률 자문이 아닌 정보 제공입니다. 제8회 KB AI Challenge 출품작.</p>
+  </div>
+</footer>
+
+</body>
+</html>

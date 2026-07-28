@@ -1,0 +1,81 @@
+"""Ollama HTTP 클라이언트. 외부 LLM API 호출 금지 — 로컬 추론 전용."""
+import json
+from typing import Iterator
+
+import httpx
+
+from app.config import settings
+
+
+class LLMUnavailable(Exception):
+    pass
+
+
+_TIMEOUT_MESSAGE = (
+    "답변 생성이 제한 시간을 넘겨 중단했습니다(CPU 추론 지연). "
+    "잠시 후 다시 시도하시거나, 문의 내용을 조금 짧게 나눠 보내주세요."
+)
+
+
+class OllamaClient:
+    def __init__(self, base_url: str | None = None, model: str | None = None,
+                 transport: httpx.BaseTransport | None = None):
+        self.base_url = (base_url or settings.OLLAMA_BASE_URL).rstrip("/")
+        self.model = model or settings.GEN_MODEL
+        self._client = httpx.Client(base_url=self.base_url, transport=transport, timeout=None)
+
+    def generate(self, system: str, prompt: str, json_mode: bool = False,
+                 timeout: float = 120) -> str:
+        payload = {
+            "model": self.model,
+            "system": system,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.2, "num_ctx": 4096},
+        }
+        if json_mode:
+            payload["format"] = "json"
+        try:
+            resp = self._client.post("/api/generate", json=payload, timeout=timeout)
+            resp.raise_for_status()
+        # TimeoutException이 먼저 — ReadTimeout(CPU 추론 지연에서 가장 흔한 실패)이
+        # RequestError로 흡수되어 '연결 실패'로 오인되지 않게 한다.
+        except httpx.TimeoutException as e:
+            raise LLMUnavailable(_TIMEOUT_MESSAGE) from e
+        except httpx.RequestError as e:
+            raise LLMUnavailable(
+                f"Ollama에 연결할 수 없습니다({self.base_url}). Ollama 실행 여부 확인: 'ollama serve'"
+            ) from e
+        except httpx.HTTPStatusError as e:
+            raise LLMUnavailable(f"Ollama 오류: {e.response.status_code} {e.response.text[:200]}") from e
+        return resp.json().get("response", "")
+
+    def stream(self, system: str, prompt: str, timeout: float = 300) -> Iterator[str]:
+        payload = {
+            "model": self.model,
+            "system": system,
+            "prompt": prompt,
+            "stream": True,
+            "options": {"temperature": 0.2, "num_ctx": 4096},
+        }
+        try:
+            with self._client.stream("POST", "/api/generate", json=payload, timeout=timeout) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if not line:
+                        continue
+                    chunk = json.loads(line)
+                    if token := chunk.get("response"):
+                        yield token
+                    if chunk.get("done"):
+                        break
+        except httpx.TimeoutException as e:
+            raise LLMUnavailable(_TIMEOUT_MESSAGE) from e
+        except httpx.RequestError as e:
+            raise LLMUnavailable(
+                f"Ollama에 연결할 수 없습니다({self.base_url}). Ollama 실행 여부 확인: 'ollama serve'"
+            ) from e
+        except httpx.HTTPStatusError as e:
+            raise LLMUnavailable(
+                f"Ollama 오류: {e.response.status_code}"
+            ) from e

@@ -1,0 +1,22 @@
+{"query": "펀드 가입할 때 위험 설명을 제대로 못 들었어요. 어떤 법 위반인가요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제19조"]}
+{"query": "은행이 대출해주는 조건으로 적금 가입을 강요해요", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제20조", "금융소비자 보호에 관한 법률 시행령-제15조"]}
+{"query": "무조건 오른다고 단정적으로 말하며 투자를 권유받았습니다", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제21조"]}
+{"query": "원금 보장이라고 광고했는데 손실이 났어요", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제22조"]}
+{"query": "투자성향 진단도 없이 고위험 상품을 권유받았어요", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제17조", "금융소비자 보호에 관한 법률-제18조"]}
+{"query": "보험 청약을 철회하고 싶은데 가능한가요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제46조"]}
+{"query": "위법한 계약을 해지할 수 있는 권리가 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제47조"]}
+{"query": "금융회사가 설명의무를 위반하면 손해배상 책임이 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제44조", "금융소비자 보호에 관한 법률-제19조"]}
+{"query": "금융분쟁조정위원회는 어떤 기구인가요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제33조", "금융소비자 보호에 관한 법률-제34조"]}
+{"query": "청약철회하면 돈은 언제 돌려받나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제46조"]}
+{"query": "사모펀드에 가입했는데 원금 손실 위험을 설명받지 못하고 큰 손해를 봤습니다", "kind": "cases", "expected_ids": ["fss-제2022-7호-case_127565_1", "fss-제2022-8호-case_127565_2", "fss-제2021-9호-case_129983_1", "fss-제2025-1호-case_217925_1", "fss-제2025-2호-case_217926_1", "fss-제2025-3호-case_217926_2", "fss-제2023-1호-case_136595_1"]}
+{"query": "특정금전신탁 환매가 중단됐는데 판매한 은행에 책임을 물을 수 있나요?", "kind": "cases", "expected_ids": ["fss-제2022-9호-case_127566_1", "fss-제2022-12호-case_127577_1", "fss-제2022-13호-case_127577_2", "fss-제2022-14호-case_127577_3"]}
+{"query": "여행상품을 카드 할부로 결제했는데 취소하고 싶어요. 청약철회 되나요?", "kind": "cases", "expected_ids": ["fss-제2026-1호-case_217927_1", "fss-제2026-2호-case_217927_2"]}
+{"query": "보이스피싱 지급정지를 은행이 늦게 처리해서 피해가 커졌어요", "kind": "cases", "expected_ids": ["fss-제2022-6호-case_64821_1"]}
+{"query": "즉시연금 최저보증이율이 제대로 적용되지 않은 것 같습니다", "kind": "cases", "expected_ids": ["fss-제2017-17호-case_64763_1"]}
+{"query": "태아 상태를 안 알렸다고 보험 계약이 문제가 되나요?", "kind": "cases", "expected_ids": ["fss-제2017-1호-case_64743_1"]}
+{"query": "업무상 질병으로 사망했는데 산재 사망보험금을 받을 수 있나요?", "kind": "cases", "expected_ids": ["fss-제2017-2호-case_64744_1"]}
+{"query": "교통사고 형사합의금도 보험으로 지급되나요?", "kind": "cases", "expected_ids": ["fss-제2026-3호-case_218695_1", "fss-제2026-4호-case_218695_2", "fss-제2026-5호-case_218695_3"]}
+{"query": "분쟁조정 신청은 어떻게 하나요?", "kind": "procedures", "expected_ids": ["proc-dispute-mediation"]}
+{"query": "민원 처리 기간은 얼마나 걸리나요?", "kind": "procedures", "expected_ids": ["proc-complaint-filing"]}
+{"query": "분쟁조정 결과에 금융회사가 따르지 않으면 어떻게 되나요?", "kind": "procedures", "expected_ids": ["proc-dispute-mediation"]}
+{"query": "증권사와 분쟁이 있는데 금감원 말고 다른 조정 기관도 있나요?", "kind": "procedures", "expected_ids": ["proc-other-bodies"]}

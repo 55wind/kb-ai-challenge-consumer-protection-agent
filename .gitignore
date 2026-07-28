@@ -1,0 +1,37 @@
+# 파이썬
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# 프론트엔드
+web/node_modules/
+web/dist/
+
+# 데이터 — 원본·인덱스는 용량이 크고 재생성된다
+#   원본: data/raw/MANIFEST.md의 출처로 scripts/collect_data.py가 재수집
+#   인덱스: scripts/build_index.py + scripts/build_graph.py가 코퍼스에서 재빌드
+data/raw/
+data/indexes/
+# app.db만 적으면 -wal·-shm이 추적된다. 저널에도 대화 내용이 그대로 들어 있다.
+data/app.db*
+
+# 배포 패키지 — 산출물이지 소스가 아니다
+*.zip
+
+# 문서 — 기획서·제출 산출물·설계 문서는 저장소 밖에서 관리한다
+docs/
+# 공모전 공식 안내문 등 배포 문서. 코드 저장소에 둘 것이 아니다.
+*.pdf
+*.pptx
+*.hwp
+
+# 에이전트 도구가 만든 파일
+.claude/
+CLAUDE.md
+.gstack/
+.idea/
+
+# 환경변수 (ADMIN_TOKENS 등)
+.env

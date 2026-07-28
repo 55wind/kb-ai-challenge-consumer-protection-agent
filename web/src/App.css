@@ -1,0 +1,685 @@
+/* ─────────────────────────────────────────────────────────────
+   KB 금융 소비자 보호 에이전트 — 디자인 토큰
+   design.md(토스 TDS) 원칙 적용: 화이트 캔버스 + 화면당 단일 강조색,
+   공격적 라운드 사다리, 1px 헤어라인 보더, 평면 표면(그림자는 floating만),
+   Pretendard, 본문 15px/1.5, 해요체 카피.
+   강조색만 토스 블루 → KB 옐로우(#FFBC00)로 치환. 노란 배경 위 텍스트는
+   흰색이 아닌 잉크색(명도 대비 확보), 링크·강조 텍스트는 어두운 골드 사용.
+   ───────────────────────────────────────────────────────────── */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+:root {
+  /* Brand (KB yellow) */
+  --brand: #ffbc00;            /* 카노니컬 KB Yellow — 화면당 하나의 primary CTA */
+  --brand-strong: #f2a900;     /* pressed 단계 */
+  --brand-weak: #fff3cc;       /* brand-weak background */
+  --brand-ink: #8a6a00;        /* 흰 배경 위 브랜드 텍스트·링크 (대비 확보용 다크 골드) */
+  --ink-dark: #60584c;         /* KB 다크 그레이브라운 — 상단바·보조 강조 */
+
+  /* Warm-tinted neutrals (KB 웜톤 — 토스의 cool-blue 대신) */
+  --grey-900: #26241f;         /* primary text, never pure black */
+  --grey-700: #55504a;         /* secondary text */
+  --grey-500: #8b857c;         /* tertiary text */
+  --grey-400: #b3ada3;         /* disabled, placeholder */
+  --grey-200: #e8e4dc;         /* default hairline divider */
+  --grey-100: #f3f1ec;         /* secondary surface */
+  --grey-50:  #f9f8f5;         /* weak surface */
+  --white: #ffffff;
+
+  /* Semantic */
+  --red: #d63c31;
+  --orange: #e8930c;
+  --green: #3f8f5c;
+
+  /* Radius ladder (TDS: 공격적 라운드) */
+  --radius-m: 12px;            /* inputs */
+  --radius-l: 14px;            /* L button */
+  --radius-xl: 16px;           /* cards, XL button */
+  --radius-2xl: 20px;          /* dialogs/sheets */
+  --radius-3xl: 24px;          /* big cards */
+  --radius-full: 999px;        /* chips, pills */
+
+  /* Elevation (floating 전용) */
+  --shadow-2: 0 4px 12px rgba(21, 18, 12, 0.06), 0 1px 2px rgba(21, 18, 12, 0.04);
+  --shadow-3: 0 12px 32px rgba(21, 18, 12, 0.10), 0 2px 6px rgba(21, 18, 12, 0.06);
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", Roboto, sans-serif;
+  color: var(--grey-900);
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+/* 한국어 줄바꿈: 어절 단위로 끊는다.
+   기본값은 음절 단위로 잘려 "확/인되었습니다"처럼 읽히므로 keep-all을 쓰고,
+   URL·긴 영문처럼 한 어절이 폭을 넘길 때만 강제로 끊는다. */
+body, button, input, textarea, table {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 인라인 SVG 아이콘 (Lucide, ISC) — currentColor 상속, 텍스트 베이스라인 정렬 */
+.icn { flex-shrink: 0; vertical-align: -2px; display: inline-block; }
+body { background: var(--white); color: var(--grey-900); font-size: 15px; line-height: 1.5; }
+button { font-family: inherit; }
+a { color: var(--brand-ink); text-decoration: none; font-size: 12px; font-weight: 500; }
+a:hover { text-decoration: underline; }
+
+/* ── 상단바 ── */
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 24px; background: var(--white);
+  border-bottom: 1px solid var(--grey-200);
+}
+.brand {
+  font-weight: 700; font-size: 17px; letter-spacing: -0.01em;
+  display: flex; align-items: center; gap: 8px;
+  color: var(--grey-900); text-decoration: none;
+}
+.brand:hover { text-decoration: none; }
+.brand .icn { color: var(--brand-strong); fill: var(--brand-weak); }
+.topbar nav a {
+  color: var(--grey-700); margin-left: 20px; font-size: 15px; font-weight: 600;
+}
+.topbar nav a:hover { color: var(--grey-900); text-decoration: none; }
+
+/* ── 챗 페이지 ── */
+.chat-page {
+  max-width: 760px; margin: 0 auto; padding: 16px 24px;
+  display: flex; flex-direction: column; height: calc(100vh - 61px);
+}
+.disclaimer {
+  background: var(--brand-weak); border: none; border-radius: var(--radius-m);
+  padding: 10px 16px; font-size: 13px; color: var(--grey-700); margin-bottom: 12px;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.disclaimer .icn { margin-top: 2px; }
+.mode-tabs {
+  display: flex; gap: 8px; margin-bottom: 16px; align-items: center;
+  flex-wrap: wrap; row-gap: 8px;   /* 좁은 화면에서 '사용법'이 잘리지 않게 */
+}
+.mode-tabs button {
+  border: 1px solid var(--grey-200); background: var(--white); color: var(--grey-700);
+  border-radius: var(--radius-full); padding: 9px 18px; cursor: pointer;
+  font-weight: 600; font-size: 14px; transition: background var(--dur-base) var(--ease);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.mode-tabs button.active {
+  background: var(--grey-900); border-color: var(--grey-900); color: var(--white);
+}
+.easy-toggle {
+  margin-left: auto; font-size: 13px; color: var(--grey-700);
+  display: flex; gap: 6px; align-items: center;
+}
+.easy-toggle input { accent-color: var(--brand); }
+
+/* ── 메시지 영역 ── */
+.messages {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 12px; padding-bottom: 16px;
+}
+/* 대화 블록은 스크롤로 흘려보내되 세로로 눌리지 않게 한다 */
+.messages > * { flex-shrink: 0; }
+.empty-hint {
+  color: var(--grey-500); white-space: pre-line; margin-top: 48px;
+  text-align: center; line-height: 1.7; font-size: 15px;
+}
+.bubble {
+  max-width: 85%; padding: 12px 18px; border-radius: var(--radius-xl);
+  line-height: 1.55; white-space: pre-wrap; font-size: 15px;
+}
+.bubble.user {
+  align-self: flex-end; background: var(--brand); color: var(--grey-900);
+  border-bottom-right-radius: 4px; font-weight: 500;
+}
+.bubble.bot {
+  align-self: flex-start; background: var(--grey-100); border: none;
+  border-bottom-left-radius: 4px;
+}
+.bubble.offer { background: var(--brand-weak); }
+.votes { margin-left: 8px; white-space: nowrap; }
+.votes button {
+  border: none; background: none; cursor: pointer; opacity: 0.45; font-size: 14px;
+  transition: opacity var(--dur-fast) var(--ease); color: var(--grey-700); padding: 2px;
+}
+.votes button:hover { opacity: 1; }
+.status {
+  color: var(--grey-500); font-size: 13px; padding-left: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── 근거 카드·용어 ── */
+.citations, .glossary, .outlook, .scan-report, .deadlines {
+  align-self: flex-start; width: 94%;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.citation-card {
+  background: var(--white); border: 1px solid var(--grey-200);
+  border-radius: var(--radius-m); padding: 12px 14px; font-size: 13px;
+}
+.citation-title { font-weight: 700; margin-bottom: 4px; color: var(--grey-900); }
+.citation-quote { color: var(--grey-700); margin-bottom: 6px; line-height: 1.5; }
+.glossary {
+  background: var(--grey-50); border-radius: var(--radius-m);
+  padding: 12px 16px; font-size: 13px; gap: 6px; color: var(--grey-700);
+}
+.glossary b { color: var(--grey-900); }
+
+/* ── 유사 사례 전망 ── */
+.outlook {
+  background: var(--white); border: 1px solid var(--grey-200);
+  border-radius: var(--radius-xl); padding: 16px;
+}
+.outlook-stats {
+  font-weight: 700; font-size: 15px; margin-bottom: 10px;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.outlook p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap; color: var(--grey-700); }
+.outlook-caveat {
+  background: var(--grey-50); border-left: 3px solid var(--grey-400);
+  border-radius: var(--radius-m); padding: 10px 14px; font-size: 12.5px;
+  color: var(--grey-700); margin-bottom: 10px; line-height: 1.55;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.outlook-caveat .icn { margin-top: 1px; }
+.tag {
+  border-radius: var(--radius-full); padding: 2px 10px;
+  font-size: 12px; font-weight: 700; color: var(--white);
+}
+.tag.grant { background: var(--green); }
+.tag.partial { background: var(--orange); }
+.tag.reject { background: var(--red); }
+/* 3종 밖 결정 라벨(각하·조정성립 등) — 승패로 읽히지 않게 중립색 */
+.tag.neutral { background: var(--grey-500); }
+
+/* ── 골든타임 카드 ── */
+.deadlines {
+  background: var(--white); border: 1px solid var(--grey-200);
+  border-radius: var(--radius-xl); padding: 16px; gap: 14px;
+  border-top: 3px solid var(--brand);
+}
+.deadlines-head {
+  font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
+  display: flex; align-items: center; gap: 7px;
+}
+.deadlines-head .icn { color: var(--brand-strong); }
+.deadline-item { display: flex; gap: 12px; font-size: 14px; align-items: flex-start; }
+.deadline-action { font-weight: 700; margin-bottom: 2px; }
+.deadline-period { font-size: 13px; color: var(--grey-700); margin-bottom: 2px; }
+
+/* 긴급도 배지: 라벨 길이가 달라도("여유" vs "기한 경과 가능") 줄이 흐트러지지 않도록
+   폭·높이를 고정하고 줄바꿈을 막는다. 가장 긴 라벨 기준으로 크기를 잡았다. */
+.deadline-item .tag {
+  flex-shrink: 0; width: 100px; padding: 7px 0; margin-top: 1px;
+  text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.25;
+  border-radius: var(--radius-m);
+}
+.tag.urgency-urgent { background: var(--red); }
+.tag.urgency-ok { background: var(--green); }
+.tag.urgency-unknown { background: var(--grey-400); }
+.tag.urgency-expired { background: var(--grey-700); }
+
+/* ── 스캔 리포트 ── */
+.kind-chip {
+  align-self: flex-start; background: var(--grey-100); color: var(--grey-700);
+  border-radius: var(--radius-full); padding: 4px 14px; font-size: 12px; font-weight: 600;
+}
+.scan-summary { font-weight: 700; font-size: 15px; }
+.scan-actions {
+  background: var(--brand-weak); border: none; border-radius: var(--radius-m);
+  padding: 10px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 5px;
+  color: var(--grey-900);
+}
+.scan-actions > div { display: flex; gap: 7px; align-items: flex-start; }
+.scan-actions .icn { color: var(--green); margin-top: 2px; }
+.scan-item {
+  display: flex; gap: 12px; background: var(--white);
+  border: 1px solid var(--grey-200); border-radius: var(--radius-m);
+  padding: 12px 14px; font-size: 14px;
+}
+.scan-item.red { border-left: 3px solid var(--red); }
+.scan-item.yellow { border-left: 3px solid var(--orange); }
+.scan-item.check { border-left: 3px solid var(--grey-400); }
+.scan-item.green { border-left: 3px solid var(--green); opacity: 0.6; }
+/* 검진 등급도 라벨 길이(위험/주의/확인 필요/정상)와 무관하게 폭을 맞춘다 */
+.scan-level {
+  font-weight: 800; font-size: 12.5px; flex-shrink: 0;
+  width: 58px; white-space: nowrap; line-height: 1.5;
+}
+.scan-item.red .scan-level { color: var(--red); }
+.scan-item.yellow .scan-level { color: var(--orange); }
+.scan-item.check .scan-level { color: var(--grey-500); }
+.scan-item.green .scan-level { color: var(--green); }
+
+/* 검진 결과의 해석 한계 — 판정이 아니라 확인 지점임을 상시 고지 */
+.scan-notice {
+  background: var(--brand-weak); border-radius: var(--radius-m);
+  padding: 10px 14px; font-size: 13px; color: var(--grey-900); line-height: 1.55;
+}
+.scan-caveat { font-size: 12.5px; color: var(--grey-500); line-height: 1.5; }
+.scan-clause { line-height: 1.5; }
+.scan-advice { color: var(--grey-700); font-size: 13px; margin-top: 4px; line-height: 1.5; }
+.scan-item details { margin-top: 8px; font-size: 13px; }
+.scan-item details summary { cursor: pointer; color: var(--brand-ink); font-weight: 600; }
+.scan-item details .citation-card { margin-top: 8px; }
+.attach-evidence {
+  align-self: flex-start; background: var(--brand); color: var(--grey-900);
+  border: none; border-radius: var(--radius-l); padding: 12px 20px;
+  cursor: pointer; font-weight: 700; font-size: 15px;
+  transition: background var(--dur-fast) var(--ease);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.attach-evidence:hover { background: var(--brand-strong); }
+
+/* ── 알림 ── */
+/* ── 근거 지도 (컨텍스트 그래프) ── */
+.evidence-graph {
+  align-self: flex-start; width: 94%; background: var(--white);
+  border: 1px solid var(--grey-200); border-radius: var(--radius-xl); padding: 14px;
+}
+.eg-head {
+  font-weight: 700; font-size: 15px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 7px;
+}
+.eg-scroll { overflow-x: auto; }
+.eg-col-title { font-size: 11px; fill: var(--grey-500); font-weight: 600; }
+.eg-node { fill: var(--grey-50); stroke-width: 1.5; cursor: pointer; }
+.eg-node-g:hover .eg-node { fill: var(--brand-weak); }
+.eg-node-label { font-size: 11px; fill: var(--grey-900); pointer-events: none; }
+.eg-edge { fill: none; stroke: var(--grey-200); stroke-width: 1.5; }
+.eg-edge-label { font-size: 9px; fill: var(--grey-400); text-anchor: middle; }
+.eg-detail {
+  margin-top: 8px; padding: 8px 12px; background: var(--grey-50);
+  border-radius: var(--radius-m); font-size: 13px; color: var(--grey-700);
+}
+.rel-chip {
+  display: inline-block; background: var(--grey-100); border-radius: var(--radius-full);
+  padding: 3px 10px; font-size: 12px; margin: 0 6px 6px 0;
+}
+.rebuild-btn {
+  margin-left: 8px; background: var(--grey-900); color: var(--white); border: none;
+  border-radius: var(--radius-m); padding: 7px 14px; cursor: pointer; font-size: 12px; font-weight: 600;
+}
+.rebuild-btn:disabled { opacity: 0.4; }
+.link-btn {
+  background: none; border: none; color: var(--brand-ink); cursor: pointer;
+  font-size: 13px; padding: 0; text-decoration: underline;
+}
+
+.notice { border-radius: var(--radius-m); padding: 12px 16px; font-size: 14px; }
+.notice.warn { background: var(--brand-weak); color: var(--grey-900); border: none; }
+.notice.error { background: #fceceb; color: var(--red); border: none; }
+
+/* ── 신청서 초안 ── */
+.draft-form { display: flex; gap: 8px; align-self: stretch; }
+.draft-form input {
+  flex: 1; border: 1px solid var(--grey-200); background: var(--grey-100);
+  border-radius: var(--radius-m); padding: 12px 14px; font-size: 15px;
+  font-family: inherit; transition: all var(--dur-base) var(--ease);
+}
+.draft-form input:focus {
+  outline: none; background: var(--white); border: 1.5px solid var(--brand);
+}
+.draft-form button, .composer button {
+  background: var(--brand); color: var(--grey-900); border: none;
+  border-radius: var(--radius-l); padding: 12px 22px; cursor: pointer;
+  font-weight: 700; font-size: 15px;
+  transition: background var(--dur-fast) var(--ease);
+}
+.draft-form button:hover:not(:disabled), .composer button:hover:not(:disabled) { background: var(--brand-strong); }
+.draft-form button:disabled, .composer button:disabled { opacity: 0.3; cursor: default; }
+.draft-preview {
+  background: var(--white); border: 1px solid var(--grey-200);
+  border-radius: var(--radius-2xl); overflow: hidden; align-self: stretch;
+  /* .messages가 세로 flex 컨테이너라 자식이 축소될 수 있다. overflow:hidden이면
+     자동 최소높이가 0으로 풀려 카드가 찌그러지므로 축소를 막는다. */
+  flex-shrink: 0;
+}
+.draft-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--grey-200);
+  font-weight: 700; font-size: 15px;
+}
+.draft-title { display: inline-flex; align-items: center; gap: 7px; }
+.draft-head button {
+  background: var(--grey-100); color: var(--grey-900); border: none;
+  border-radius: var(--radius-m); padding: 8px 14px; cursor: pointer;
+  font-weight: 600; font-size: 13px;
+}
+.draft-head button:hover { background: var(--grey-200); }
+.draft-body { max-height: 420px; overflow-y: auto; padding: 22px 24px 26px; }
+
+/* ── 마크다운 렌더링 ──────────────────────────────────────────────
+   신청서 초안은 "다운로드 전에 읽는 서류"다. 원문(.md)은 그대로 받아가되,
+   화면에서는 문서처럼 위계가 보여야 한다. */
+.md { font-size: 14px; line-height: 1.7; color: var(--grey-900); }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+
+.md h1 {
+  font-size: 19px; font-weight: 700; letter-spacing: -0.015em;
+  margin: 0 0 16px; padding-bottom: 12px;
+  border-bottom: 2px solid var(--grey-900);
+}
+/* 섹션 구분은 크기와 여백으로 낸다.
+   좌측 강조 바는 이 파일에서 '의미'를 나르는 표시다 — 검진 등급(적/황/회/녹),
+   한계 고지, 골든타임 카드. 모든 h2에 균일하게 붙이면 아무것도 구분하지 못하면서
+   화면당 하나여야 할 브랜드 강조색만 흐려진다. */
+.md h2 {
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+  margin: 26px 0 8px; line-height: 1.4;
+}
+.md h3 { font-size: 13.5px; font-weight: 700; margin: 16px 0 6px; }
+.md h4 { font-size: 13px; font-weight: 700; margin: 14px 0 4px; color: var(--grey-700); }
+
+.md p { margin: 0 0 10px; color: var(--grey-900); }
+.md p.md-lead {
+  font-weight: 700; color: var(--grey-900); margin: 14px 0 6px;
+}
+.md > p.md-lead:first-child { margin-top: 0; }
+.md strong { font-weight: 700; }
+.md code {
+  font-family: ui-monospace, Consolas, monospace; font-size: 12.5px;
+  background: var(--grey-100); border-radius: 5px; padding: 1px 5px;
+}
+.md hr { border: none; border-top: 1px solid var(--grey-200); margin: 22px 0 18px; }
+
+.md blockquote {
+  margin: 0 0 16px; padding: 12px 16px;
+  background: var(--grey-50); border-radius: var(--radius-m);
+  font-size: 13px; line-height: 1.6; color: var(--grey-700);
+}
+
+.md ul { margin: 0 0 12px; padding-left: 20px; }
+.md li { margin-bottom: 5px; }
+
+/* 증빙 체크리스트 — 실제 서류의 체크박스처럼 */
+.md ul.md-checklist { list-style: none; padding-left: 0; }
+.md ul.md-checklist li {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 9px 12px; margin-bottom: 6px;
+  background: var(--grey-50); border-radius: var(--radius-m);
+  font-size: 13.5px; line-height: 1.55;
+}
+.md .md-box {
+  flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px;
+  border: 1.5px solid var(--grey-400); border-radius: 5px;
+  background: var(--white); color: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+.md ul.md-checklist li.checked { background: var(--brand-weak); }
+.md ul.md-checklist li.checked .md-box {
+  background: var(--brand); border-color: var(--brand); color: var(--grey-900);
+}
+
+.md-table-wrap { overflow-x: auto; margin: 0 0 16px; }
+.md table {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+  border: 1px solid var(--grey-200); border-radius: var(--radius-m); overflow: hidden;
+}
+.md th, .md td {
+  padding: 9px 12px; border-bottom: 1px solid var(--grey-200);
+  text-align: left; vertical-align: top; line-height: 1.5;
+}
+.md th { background: var(--grey-50); font-weight: 700; color: var(--grey-700); white-space: nowrap; }
+.md tr:last-child td { border-bottom: none; }
+
+/* 사례 전망 코멘터리 — 문서가 아니라 본문 흐름이므로 여백을 줄인다 */
+.outlook-commentary { font-size: 14px; color: var(--grey-700); }
+.outlook-commentary p { margin-bottom: 8px; color: var(--grey-700); }
+.outlook-commentary p:last-child { margin-bottom: 0; }
+.outlook-commentary h1, .outlook-commentary h2, .outlook-commentary h3 {
+  font-size: 14px; font-weight: 700; color: var(--grey-900);
+  margin: 12px 0 6px; padding: 0; border: none;
+}
+.outlook-commentary ul { padding-left: 18px; margin-bottom: 8px; }
+
+/* ── 입력창 ── */
+.composer {
+  display: flex; gap: 8px; padding-top: 12px;
+  border-top: 1px solid var(--grey-200);
+}
+.composer textarea {
+  flex: 1; border: 1px solid var(--grey-200); background: var(--grey-100);
+  border-radius: var(--radius-m); padding: 12px 14px; resize: none; height: 64px;
+  font-family: inherit; font-size: 15px; line-height: 1.5;
+  transition: all var(--dur-base) var(--ease);
+}
+.composer textarea:focus {
+  outline: none; background: var(--white); border: 1.5px solid var(--brand);
+}
+.composer textarea::placeholder { color: var(--grey-400); }
+
+/* ── 사용법 안내 (온보딩 투어) ── */
+.help-btn {
+  margin-left: 10px; border: 1px solid var(--grey-200); background: var(--white);
+  color: var(--grey-500); border-radius: var(--radius-full); padding: 6px 14px;
+  cursor: pointer; font-size: 12.5px; font-weight: 600;
+  transition: all var(--dur-fast) var(--ease);
+}
+.help-btn:hover { color: var(--grey-900); border-color: var(--grey-400); }
+
+.tour { position: fixed; inset: 0; z-index: 1000; }
+.tour-dim {
+  position: absolute; inset: 0; background: rgba(38, 36, 31, 0.55);
+  animation: tour-fade var(--dur-base) var(--ease);
+}
+.tour-spotlight {
+  position: fixed; border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 200vmax rgba(38, 36, 31, 0.55);
+  border: 2px solid var(--brand);
+  transition: top 320ms var(--ease), left 320ms var(--ease),
+    width 320ms var(--ease), height 320ms var(--ease);
+  pointer-events: none;
+}
+.tour-card {
+  position: fixed; width: 320px; max-width: calc(100vw - 32px);
+  background: var(--white); border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-3); padding: 20px;
+  animation: tour-pop 260ms var(--ease);
+}
+.tour-badge {
+  display: inline-block; background: var(--brand-weak); color: var(--brand-ink);
+  border-radius: var(--radius-full); padding: 3px 12px;
+  font-size: 12px; font-weight: 700; margin-bottom: 10px;
+}
+.tour-title {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px;
+}
+.tour-body {
+  font-size: 14px; line-height: 1.6; color: var(--grey-700);
+  white-space: pre-line; margin-bottom: 14px;
+}
+.tour-consent {
+  background: var(--grey-50); border-radius: var(--radius-m);
+  padding: 10px 12px; margin-bottom: 14px; font-size: 12.5px;
+}
+.tour-consent summary {
+  cursor: pointer; color: var(--brand-ink); font-weight: 600; font-size: 12.5px;
+}
+.tour-consent dl { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tour-consent dt { font-weight: 700; color: var(--grey-900); margin-bottom: 2px; }
+.tour-consent dd { margin: 0; color: var(--grey-700); line-height: 1.5; }
+
+.tour-dots { display: flex; gap: 5px; margin-bottom: 14px; }
+.tour-dots span {
+  width: 6px; height: 6px; border-radius: var(--radius-full);
+  background: var(--grey-200); transition: all var(--dur-base) var(--ease);
+}
+.tour-dots span.on { width: 18px; background: var(--brand); }
+.tour-actions { display: flex; justify-content: space-between; align-items: center; }
+.tour-nav { display: flex; gap: 6px; }
+.tour-skip {
+  border: none; background: none; color: var(--grey-500); cursor: pointer;
+  font-size: 13px; font-weight: 600; padding: 8px 4px;
+}
+.tour-skip:hover { color: var(--grey-700); }
+.tour-prev {
+  border: none; background: var(--grey-100); color: var(--grey-700);
+  border-radius: var(--radius-m); padding: 9px 16px; cursor: pointer;
+  font-size: 14px; font-weight: 600;
+  transition: background var(--dur-fast) var(--ease);
+}
+.tour-prev:hover { background: var(--grey-200); }
+.tour-next {
+  border: none; background: var(--brand); color: var(--grey-900);
+  border-radius: var(--radius-m); padding: 9px 18px; cursor: pointer;
+  font-size: 14px; font-weight: 700;
+  transition: background var(--dur-fast) var(--ease);
+}
+.tour-next:hover { background: var(--brand-strong); }
+.tour-next:focus-visible, .tour-prev:focus-visible, .tour-skip:focus-visible {
+  outline: 2px solid var(--brand-ink); outline-offset: 2px;
+}
+@keyframes tour-fade { from { opacity: 0; } }
+@keyframes tour-pop {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* 환영 단계(중앙 카드)는 transform으로 위치를 잡으므로 pop 애니메이션과 충돌하지 않게 분리 */
+.tour-card[style*="translate(-50%"] { animation: tour-fade 260ms var(--ease); }
+
+/* ── 좁은 화면 ── */
+@media (max-width: 560px) {
+  .chat-page { padding: 12px 16px; }
+  /* 배지가 본문 폭을 너무 잡아먹지 않도록 줄인다 (정렬은 그대로 유지) */
+  .deadline-item .tag { width: 74px; font-size: 11px; padding: 6px 0; }
+  .deadline-item { gap: 10px; }
+  .scan-level { width: 48px; font-size: 11.5px; }
+  .draft-body { padding: 16px 16px 20px; }
+  .md h1 { font-size: 17px; }
+  .citations, .glossary, .outlook, .scan-report, .deadlines, .evidence-graph { width: 100%; }
+}
+
+/* ── 관리자 ── */
+/* 담당자 워크벤치는 표와 그래프를 읽는 화면이라 넓은 모니터를 그대로 쓴다.
+   (소비자 챗은 읽기 편한 760px 유지 — 목적이 다르다) */
+.admin-page { max-width: 1440px; margin: 0 auto; padding: 24px; }
+/* 지식 그래프 탭만 폭 제한을 더 푼다 — 노드 라벨이 겹치면 복기가 불가능하다 */
+.admin-page.graph-wide { max-width: min(1920px, 96vw); }
+.admin-page h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 20px; }
+.stat-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card {
+  background: var(--grey-50); border: none; border-radius: var(--radius-xl);
+  padding: 16px 24px; text-align: center; font-size: 13px; color: var(--grey-700);
+}
+.stat-card.wide { flex: 1; text-align: left; min-width: 320px; }
+.stat-num { font-size: 28px; font-weight: 700; color: var(--grey-900); font-variant-numeric: tabular-nums; }
+.cat-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+.cat-name { min-width: 130px; color: var(--grey-700); }
+.bar-track { flex: 1; background: var(--grey-200); border-radius: var(--radius-full); height: 8px; }
+.bar-fill { background: var(--brand); height: 8px; border-radius: var(--radius-full); }
+
+table {
+  width: 100%; border-collapse: collapse; background: var(--white);
+  border: 1px solid var(--grey-200); border-radius: var(--radius-xl);
+  overflow: hidden; font-size: 13px;
+}
+th, td { padding: 10px 14px; border-bottom: 1px solid var(--grey-200); text-align: left; }
+tr:last-child td { border-bottom: none; }
+th { background: var(--grey-50); color: var(--grey-700); font-weight: 600; }
+td { font-variant-numeric: tabular-nums; }
+.mono { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--grey-500); }
+.summary-cell { max-width: 340px; }
+.doc-filter { display: flex; gap: 6px; margin-bottom: 12px; align-items: center; }
+.doc-filter button {
+  border: 1px solid var(--grey-200); background: var(--white); color: var(--grey-700);
+  border-radius: var(--radius-full); padding: 6px 16px; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+}
+.doc-filter button.active { background: var(--grey-900); border-color: var(--grey-900); color: var(--white); }
+.doc-count { margin-left: auto; font-size: 12px; color: var(--grey-500); }
+
+/* ── 컨텍스트 그래프 시각화 (관리자) ───────────────────────────── */
+.graph-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.graph-controls { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.graph-controls button {
+  background: var(--white); border: 1px solid var(--grey-200); color: var(--grey-700);
+  border-radius: var(--radius-full); padding: 6px 14px; cursor: pointer; font-size: 12px;
+}
+.graph-controls button.active { background: var(--grey-900); color: var(--white); border-color: var(--grey-900); }
+.graph-controls label { display: inline-flex; align-items: center; gap: 6px; color: var(--grey-700); }
+.graph-controls select {
+  border: 1px solid var(--grey-200); border-radius: var(--radius-m); padding: 5px 8px; font-size: 12px;
+}
+.graph-sep { width: 1px; height: 18px; background: var(--grey-200); }
+
+.graph-pane { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+.graph-canvas {
+  border: 1px solid var(--grey-200); border-radius: var(--radius-l);
+  background:
+    radial-gradient(circle, var(--grey-100) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--white);
+  /* 높이는 화면에 맞춘다. 460px 고정이면 노드 수십 개가 겹쳐 라벨을 못 읽는다.
+     빼는 값은 캔버스 위에 쌓이는 것들(상단바·제목·탭·그래프 통계·툴바·관계필터). */
+  height: clamp(420px, calc(100vh - 410px), 900px);
+}
+/* 크게 보기 — 그래프 통계까지 접고 캔버스에 세로를 몰아준다 */
+.graph-pane.focus { grid-template-columns: 1fr 280px; }
+.graph-pane.focus .graph-canvas { height: clamp(460px, calc(100vh - 300px), 1200px); }
+.graph-side { display: flex; flex-direction: column; gap: 10px; }
+.graph-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: 11px; color: var(--grey-700); }
+.graph-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.graph-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.graph-hint { font-size: 12px; color: var(--grey-500); line-height: 1.6; margin: 0; }
+.graph-edge-detail {
+  border: 1px solid var(--grey-200); border-radius: var(--radius-m);
+  padding: 12px 14px; font-size: 12.5px; background: var(--grey-50);
+}
+.graph-edge-detail.empty { color: var(--grey-500); text-align: center; padding: 22px 14px; }
+.graph-edge-detail .ged-rel {
+  display: inline-block; background: var(--brand-weak); color: var(--brand-ink);
+  border-radius: var(--radius-full); padding: 2px 10px; font-weight: 700; font-size: 11px;
+}
+.graph-edge-detail .ged-pair { margin: 8px 0 10px; line-height: 1.5; color: var(--grey-900); }
+.graph-edge-detail dl { margin: 0 0 10px; }
+.graph-edge-detail dt { font-size: 11px; color: var(--grey-500); margin-top: 8px; }
+.graph-edge-detail dd { margin: 2px 0 0; color: var(--grey-700); line-height: 1.55; word-break: break-all; }
+
+@media (max-width: 900px) {
+  .graph-pane { grid-template-columns: 1fr; }
+}
+.graph-relfilter {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.graph-relfilter .grf-label { font-size: 11px; color: var(--grey-500); margin-right: 4px; }
+.graph-relfilter button {
+  background: var(--white); border: 1px solid var(--grey-200); color: var(--grey-500);
+  border-radius: var(--radius-full); padding: 4px 11px; cursor: pointer; font-size: 11.5px;
+}
+.graph-relfilter button.on {
+  background: var(--brand-weak); border-color: var(--brand); color: var(--brand-ink); font-weight: 600;
+}
+
+/* ── 검사 요약 보강 ─────────────────────────────────────────── */
+.scan-toprisk {
+  display: flex; align-items: center; gap: 7px; margin: 8px 0 4px;
+  padding: 9px 13px; background: var(--brand-weak); border-radius: var(--radius-m);
+  font-size: 13.5px; font-weight: 600; color: var(--brand-ink);
+}
+.scan-scope {
+  margin: 6px 0; font-size: 12.5px; color: var(--grey-500);
+}
+/* 사실관계 수집 진행 — 신청서 버튼을 누르고 400을 받기 전에 알려준다 */
+.slot-progress {
+  display: flex; align-items: center; gap: 7px; margin: 10px 0;
+  padding: 9px 13px; background: var(--grey-50); border-radius: var(--radius-m);
+  font-size: 13px; color: var(--grey-700);
+}
+/* 투표한 버튼은 눌린 상태가 남아야 한다 */
+.votes button.voted {
+  color: var(--brand-ink); background: var(--brand-weak); border-radius: var(--radius-full);
+}
+/* 스트리밍 중 잠정 표시 — 아직 근거 검증 전이라는 것을 감추지 않는다 */
+.bubble.bot.streaming { opacity: 0.82; border-left: 3px solid var(--brand); }
+.streaming-tag {
+  display: block; margin-top: 8px; font-size: 11.5px; color: var(--grey-500);
+}

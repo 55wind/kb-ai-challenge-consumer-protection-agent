@@ -1,0 +1,74 @@
+# 은행 온프레미스 배포 구성: 앱 + Ollama(sLLM 추론)
+# 최초 1회: docker compose run --rm ollama-init && docker compose run --rm app-init
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull exaone3.5:2.4b"]
+    profiles: ["init"]
+
+  # 고객용 인스턴스 — 인터넷 노출. 관리 라우트가 아예 등록되지 않는다(망 분리).
+  app:
+    build: .
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      ADMIN_ENABLED: "false"
+      DATA_DIR: /srv/data
+      LLM_MAX_CONCURRENT: "2"
+      # TLS 종단 프록시의 IP·CIDR. 지정해야 X-Forwarded-For를 신뢰해 사용자별로
+      # 레이트리밋이 걸린다. 비워두면 전체 트래픽이 프록시 IP 하나로 집계된다.
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+    volumes:
+      - app-data:/srv/data          # SQLite·인덱스·그래프 영속화
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # 관리용 인스턴스 — 내부망 전용(호스트 루프백에만 바인딩). 토큰별 신원 + IP 허용목록 + 감사 기록.
+  app-admin:
+    build: .
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      ADMIN_ENABLED: "true"
+      ADMIN_TOKENS: ${ADMIN_TOKENS:?ADMIN_TOKENS를 .env에 설정하세요 (예: hong:시크릿1,kim:시크릿2)}
+      ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+      DATA_DIR: /srv/data
+      LLM_MAX_CONCURRENT: "1"
+    volumes:
+      - app-data:/srv/data          # 고객 인스턴스와 동일 데이터 공유
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "127.0.0.1:8001:8000"
+    restart: unless-stopped
+
+  app-init:
+    build: .
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      DATA_DIR: /srv/data
+    volumes:
+      - app-data:/srv/data
+      - hf-cache:/root/.cache/huggingface
+    entrypoint: ["/bin/sh", "-c",
+      "cp -rn data/corpus /srv/data/ 2>/dev/null; python scripts/build_index.py && python scripts/build_graph.py"]
+    profiles: ["init"]
+
+volumes:
+  ollama-models:
+  app-data:
+  hf-cache:
