@@ -17,6 +17,19 @@ _TIMEOUT_MESSAGE = (
 )
 
 
+def _options(**extra) -> dict:
+    """Ollama 추론 옵션. NUM_GPU를 지정하면 GPU에 올릴 레이어 수를 강제한다.
+
+    기본은 미지정 — Ollama가 하드웨어를 보고 알아서 정한다. 0을 주면 CPU 전용이
+    되는데, GPU 없는 사이트에 배포하기 전 같은 장비에서 CPU 동작을 검증하거나
+    CPU 성능을 실측할 때 쓴다.
+    """
+    opts = {"temperature": 0.2, "num_ctx": 4096, **extra}
+    if settings.OLLAMA_NUM_GPU is not None:
+        opts["num_gpu"] = settings.OLLAMA_NUM_GPU
+    return opts
+
+
 class OllamaClient:
     def __init__(self, base_url: str | None = None, model: str | None = None,
                  transport: httpx.BaseTransport | None = None):
@@ -31,7 +44,7 @@ class OllamaClient:
             "system": system,
             "prompt": prompt,
             "stream": False,
-            "options": {"temperature": 0.2, "num_ctx": 4096},
+            "options": _options(),
         }
         if json_mode:
             payload["format"] = "json"
@@ -56,7 +69,7 @@ class OllamaClient:
             "system": system,
             "prompt": prompt,
             "stream": True,
-            "options": {"temperature": 0.2, "num_ctx": 4096},
+            "options": _options(),
         }
         try:
             with self._client.stream("POST", "/api/generate", json=payload, timeout=timeout) as resp:

@@ -30,6 +30,11 @@ def _env_float(name: str, default: float) -> float:
 class Settings(BaseModel):
     OLLAMA_BASE_URL: str = _env_str("OLLAMA_BASE_URL", "http://localhost:11434")
     GEN_MODEL: str = _env_str("GEN_MODEL", "exaone3.5:2.4b")
+    # GPU에 올릴 레이어 수. 미지정이면 Ollama가 하드웨어를 보고 정한다(권장).
+    # 0 = CPU 전용 — GPU 없는 사이트 배포 전 검증, CPU 성능 실측에 쓴다.
+    OLLAMA_NUM_GPU: int | None = (
+        int(_env_str("OLLAMA_NUM_GPU", "")) if _env_str("OLLAMA_NUM_GPU", "") else None
+    )
     EMBED_MODEL: str = _env_str("EMBED_MODEL", "nlpai-lab/KURE-v1")
     DATA_DIR: Path = Path(_env_str("DATA_DIR", str(ROOT / "data")))
     CORPUS_DIR: Path = Path(_env_str("DATA_DIR", str(ROOT / "data"))) / "corpus"

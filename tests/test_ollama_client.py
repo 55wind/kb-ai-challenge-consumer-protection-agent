@@ -61,3 +61,37 @@ def test_generate_http_error_becomes_llm_unavailable():
 
     with pytest.raises(LLMUnavailable):
         _client_with(handler).generate("sys", "질문")
+
+
+def test_num_gpu_absent_by_default():
+    """미지정이면 옵션을 보내지 않는다 — Ollama가 하드웨어를 보고 정하게 둔다."""
+    def handler(request):
+        assert "num_gpu" not in json.loads(request.content)["options"]
+        return httpx.Response(200, json={"response": "ok"})
+
+    _client_with(handler).generate("sys", "질문")
+
+
+@pytest.mark.parametrize("mode", ["generate", "stream"])
+def test_num_gpu_zero_forces_cpu(monkeypatch, mode):
+    """OLLAMA_NUM_GPU=0이면 두 경로 모두 CPU 전용으로 요청한다.
+
+    generate에만 붙고 stream에 빠지면, CPU 전용 사이트 검증이 스트리밍 경로를
+    통과시켜 버린다 — 실제 답변은 전부 stream으로 나간다.
+    """
+    from app.llm import ollama_client
+
+    monkeypatch.setattr(ollama_client.settings, "OLLAMA_NUM_GPU", 0)
+
+    seen = {}
+
+    def handler(request):
+        seen.update(json.loads(request.content)["options"])
+        return httpx.Response(200, json={"response": "ok", "done": True})
+
+    c = _client_with(handler)
+    if mode == "generate":
+        c.generate("sys", "질문")
+    else:
+        list(c.stream("sys", "질문"))
+    assert seen["num_gpu"] == 0
