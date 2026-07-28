@@ -12,6 +12,13 @@
 
 정답지 주의: 결정례 facts는 법률 문어체다. 실제 소비자가 쓰는 구어체 민원과
 분포가 다르므로, 분류 정확도는 대리 지표로 읽어야 한다. 이 한계는 결과에도 적는다.
+
+CPU/GPU를 비교할 때 반드시 지킬 것 두 가지 — 둘 다 실제로 틀린 수치를 만들었다.
+
+  1. OLLAMA_NUM_GPU를 바꿔도 **이미 적재된 모델은 이전 배치 그대로 남는다.**
+     사이에 `ollama stop <모델>`을 넣고 `ollama ps`로 PROCESSOR를 눈으로 확인한다.
+  2. 두 측정을 **동시에 돌리지 않는다.** 같은 Ollama를 두고 경합하면 양쪽이
+     모두 부풀어 오른다(생성 2.4초짜리가 55초로 나왔다).
 """
 import argparse
 import collections
@@ -155,13 +162,13 @@ def eval_citation(llm) -> dict:
     }
 
 
-def eval_speed(llm) -> dict:
+def eval_speed(llm, samples: int = 5) -> dict:
     """작업별 지연. 사용자가 기다리는 시간이 어디서 오는지 본다."""
     from app.agent import answerer, classifier
     from app.agent import slots as slots_mod
     from app.search.retriever import NoEvidenceFound, retrieve
 
-    rows = _goldenset()[:5]
+    rows = _goldenset()[:samples]
     marks: dict[str, list[float]] = collections.defaultdict(list)
 
     for row in rows:
@@ -192,15 +199,27 @@ def main() -> int:
     ap.add_argument("--cases", type=int, default=40, help="분류 평가 표본 수")
     ap.add_argument("--rounds", type=int, default=3, help="일관성 반복 횟수")
     ap.add_argument("--quick", action="store_true", help="표본을 줄여 빠르게")
+    ap.add_argument("--speed-only", action="store_true",
+                    help="속도만 측정. CPU 전용(OLLAMA_NUM_GPU=0)에서 전체를 돌리면 "
+                         "답변 생성이 문항당 수십 초라 끝나지 않는다")
+    ap.add_argument("--speed-samples", type=int, default=3, help="속도 측정 질의 수")
     a = ap.parse_args()
     if a.quick:
         a.cases, a.rounds = 12, 2
 
+    from app.config import settings
     from app.llm.ollama_client import OllamaClient
     llm = OllamaClient()
 
-    print(f"EXAONE 3.5 2.4B 품질·속도 측정  (모델: {llm.model})")
+    device = "CPU 전용" if settings.OLLAMA_NUM_GPU == 0 else "기본(하드웨어 자동)"
+    print(f"EXAONE 3.5 2.4B 품질·속도 측정  (모델: {llm.model} · {device})")
     print(BAR)
+
+    if a.speed_only:
+        print(f"\n작업별 속도 — {a.speed_samples}개 질의 중앙값")
+        for name, sec in eval_speed(llm, a.speed_samples).items():
+            print(f"  {name:<12}{sec:>8.2f}초")
+        return 0
 
     print(f"\n[1] 유형 분류 — 금감원 라벨 결정례 {a.cases}건")
     c = eval_classification(llm, a.cases)
@@ -230,7 +249,7 @@ def main() -> int:
     print(f"  지연 중앙값   {z['지연_중앙값']:.2f}초 · 평균 {z['답변_평균글자']:.0f}자")
 
     print("\n[4] 작업별 속도")
-    for name, sec in eval_speed(llm).items():
+    for name, sec in eval_speed(llm, a.speed_samples).items():
         print(f"  {name:<12}{sec:>7.2f}초")
 
     print(f"\n{BAR}")
