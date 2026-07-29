@@ -83,3 +83,34 @@ def test_real_interpretations_corpus_loads():
     assert len(records) > 100, "유권해석 코퍼스가 비었거나 파싱이 깨졌다"
     assert {r.doc_type for r in records} == {"FAQ", "해설"}
     assert all(r.title.strip() and r.text.strip() for r in records)
+
+
+def test_case_category_records_who_decided_it():
+    """유형을 누가 정했는지가 레코드에 남아야 한다.
+
+    결정례의 민원 유형은 **원문에 없다** — 금감원은 결정서에 유형을 붙여
+    배포하지 않는다. 그런데 우리 키워드 규칙이 만든 값을 문서가 "기관이 분류한
+    실데이터"라고 설명해 왔고, 금감원 사례집과 대조 가능한 17건에서 3건(18%)이
+    틀렸다. 추정을 기관 분류인 척하지 않으려면 이 구분이 레코드에 있어야 한다.
+    """
+    records = load_corpus("cases")
+    assert len(records) >= 100
+    sources = {r.category_source for r in records}
+    assert sources <= {"금융감독원 사례집", "키워드 규칙(추정)"}, sources
+    # 사례집과 이어 붙인 건이 실제로 있어야 한다 — 0이면 색인이 깨진 것이다.
+    assert sum(r.category_source == "금융감독원 사례집" for r in records) >= 10
+
+
+def test_fss_case_index_is_present_and_labeled_by_the_regulator():
+    """금감원 사례집 색인이 있어야 분류 정답지를 기관 라벨로 유지할 수 있다."""
+    import json
+    from pathlib import Path
+
+    from app.config import settings
+
+    path = settings.DATA_DIR / "fss_case_index.jsonl"
+    assert path.exists(), "build_fss_case_index.py를 실행하세요"
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    assert len(rows) >= 300, f"사례집 색인이 {len(rows)}건뿐이다 — 목차 파싱이 깨졌다"
+    assert all(r["source"].startswith("금융감독원") for r in rows)
+    assert len({r["chapter"] for r in rows}) >= 15, "금감원 분류 체계가 덜 잡혔다"

@@ -44,6 +44,15 @@ class CaseRecord(_SourcedRecord):
     decision: Literal["인용", "일부인용", "기각"]
     decision_date: str
     category: str
+    # 그 category를 누가 정했는지. 이 구분이 없으면 우리 추정이 기관 분류인 척한다.
+    #
+    #   "금융감독원 사례집"  금감원 「금융분쟁조정 사례집」의 사례 목차와 제목이
+    #                      일치해 그쪽 분류를 옮겨 온 것. 기관이 붙인 라벨이다.
+    #   "키워드 규칙(추정)"  사례집에 없어 build_corpus.py의 키워드 규칙이 정한 것.
+    #                      금감원 라벨과 대조 가능한 17건에서 **오류율 18%**였다.
+    #
+    # 화면·문서에서 정확도를 말할 때 이 값을 함께 봐야 한다.
+    category_source: Literal["금융감독원 사례집", "키워드 규칙(추정)"] = "키워드 규칙(추정)"
 
 
 class ProcedureDoc(_SourcedRecord):

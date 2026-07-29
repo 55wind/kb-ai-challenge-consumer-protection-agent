@@ -17,8 +17,16 @@
      `CATEGORIES`는 10개인데 결정례 라벨은 5개뿐이라, 나머지 5개는 고르는 순간
      오답으로 집계된다. 이것은 모델의 잘못이 아니라 **측정의 성질**이다.
 
+**정답지를 두 가지 중에 고른다.**
+
+  `--source fss`  (기본) 금융감독원 「금융분쟁조정 사례집」의 사례 목차 394건.
+                  라벨을 **금감원이 붙였다**. 입력은 사례 제목이다.
+  `--source ours` 결정례 `facts` 60건. 라벨은 `build_corpus.py`의 키워드 규칙,
+                  즉 **우리가 만든 것**이다. 실제로 틀린 라벨이 확인됐다
+                  (`build_classifier_goldset.py` 설명 참조). 비교용으로만 남긴다.
+
 사용:
-    python scripts/diagnose_classifier.py --cases 60
+    python scripts/diagnose_classifier.py --source fss --limit 120
 """
 import argparse
 import collections
@@ -36,20 +44,39 @@ from app.agent.classifier import CATEGORIES, _candidates, classify  # noqa: E402
 from app.llm.ollama_client import OllamaClient  # noqa: E402
 from scripts.eval_model import _cases  # noqa: E402
 
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _fss(limit: int) -> list[tuple[str, str]]:
+    """금감원 사례집 정답지. 라벨을 우리가 만들지 않았다는 것이 요점이다."""
+    path = ROOT / "data" / "classifier_goldset.jsonl"
+    if not path.exists():
+        raise SystemExit("먼저 build_fss_case_index.py → build_classifier_goldset.py 실행")
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    import random
+    random.Random(20260730).shuffle(rows)   # 유형 편중을 흩되 재현 가능하게
+    return [(r["query"], r["category"]) for r in rows[:limit]]
+
+
 BAR = "─" * 66
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", type=int, default=60)
+    ap.add_argument("--source", choices=("fss", "ours"), default="fss",
+                    help="fss=금감원 사례집 라벨(권장) · ours=우리 키워드 규칙 라벨")
+    ap.add_argument("--limit", type=int, default=120, help="표본 수")
     ap.add_argument("--no-llm", action="store_true",
                     help="후보 회수율만 잰다 (sLLM 호출 없음 — 빠르다)")
     args = ap.parse_args()
 
-    data = _cases(args.cases)
+    data = _fss(args.limit) if args.source == "fss" else _cases(args.limit)
+    label = ("금감원 사례집 (라벨: 금융감독원)" if args.source == "fss"
+             else "결정례 facts (라벨: 우리 키워드 규칙)")
     gold_labels = {g for _, g in data}
     unreachable = sorted(set(CATEGORIES) - gold_labels)
 
+    print(f"정답지: {label}")
     print(f"표본 {len(data)}건")
     print(f"정답지 라벨 {len(gold_labels)}종: {sorted(gold_labels)}")
     print(f"분류기 유형 {len(CATEGORIES)}종 — 정답지에 없는 {len(unreachable)}종: {unreachable}")

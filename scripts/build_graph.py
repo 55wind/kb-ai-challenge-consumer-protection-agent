@@ -101,9 +101,17 @@ def build() -> ContextGraph:
                 n_cites += 1
 
     # ── 엣지 2: case -categorized_as-> category ──
+    #
+    # provenance를 유형 출처에 맞춘다. 예전에는 전부 `corpus_label`로 적었는데,
+    # 그 라벨의 대부분은 기관이 붙인 것이 아니라 **우리 키워드 규칙의 추정**이었다.
+    # 금감원 라벨과 대조 가능한 17건에서 3건(18%)이 틀렸으므로, 같은 무게로 적으면
+    # 큐레이션 화면에서 담당자가 근거를 잘못 신뢰한다.
     for r in cases:
-        g.add_edge(r.id, "categorized_as", f"cat:{r.category}",
-                   _prov("corpus_label", r.id)) if f"cat:{r.category}" in g.nodes else None
+        if f"cat:{r.category}" not in g.nodes:
+            continue
+        method = ("fss_casebook" if r.category_source == "금융감독원 사례집"
+                  else "keyword_rule")
+        g.add_edge(r.id, "categorized_as", f"cat:{r.category}", _prov(method, r.id))
 
     # ── 엣지 3: case -similar_to-> case (FAISS 벡터 재구성 코사인) ──
     from app.search.indexer import load_index
