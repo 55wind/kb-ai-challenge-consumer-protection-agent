@@ -18,7 +18,7 @@ from app.corpus.schema import CorpusValidationError
 
 def main() -> int:
     failed = False
-    for kind in ("laws", "cases", "procedures", "kb_products"):
+    for kind in ("laws", "cases", "interpretations", "procedures", "kb_products"):
         try:
             records = load_corpus(kind)
         except CorpusValidationError as e:

@@ -28,6 +28,9 @@ TEXT_FNS = {
     "cases": lambda r: f"{r.title}\n{r.facts}\n{r.issues}",
     "procedures": _procedure_text,
     "kb_products": lambda r: f"{r.product_name} {r.doc_type} {r.section}\n{r.text}",
+    # 제목(=질문)을 앞에 둔다. FAQ는 질문 문장 자체가 소비자 질의와 가장 가깝고,
+    # 해설서는 그 쪽의 논점이 제목에 들어 있다.
+    "interpretations": lambda r: f"{r.title}\n{r.topic}\n{r.text}",
 }
 
 

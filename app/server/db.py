@@ -151,7 +151,7 @@ def sync_documents(conn) -> int:
     from app.corpus.loader import load_corpus
 
     n = 0
-    for kind in ("laws", "cases", "procedures", "kb_products"):
+    for kind in ("laws", "cases", "procedures", "kb_products", "interpretations"):
         try:
             for r in load_corpus(kind):
                 # KB 상품 청크는 title/article이 없다 — 상품명·구획으로 제목을 만든다

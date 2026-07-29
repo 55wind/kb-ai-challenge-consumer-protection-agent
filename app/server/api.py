@@ -286,7 +286,7 @@ def create_app(context: AppContext | None = None) -> FastAPI:
         # 보인다. 그래서 어떤 인덱스가 빠졌는지는 여기서 개별로 알려야 운영자가 안다.
         # kb_products가 빠지면 KB 약관 인용 경로만 조용히 사라진다 — 필수와 구분한다.
         _required = ("laws", "cases", "procedures")
-        _optional = ("kb_products",)
+        _optional = ("kb_products", "interpretations")
         missing = [k for k in _required + _optional
                    if not (settings.INDEX_DIR / f"{k}.faiss").exists()]
         checks["indexes"] = not [k for k in missing if k in _required]
@@ -300,7 +300,7 @@ def create_app(context: AppContext | None = None) -> FastAPI:
 
         corpus_error = ""
         try:
-            for _k in ("laws", "cases", "procedures", "kb_products"):
+            for _k in ("laws", "cases", "procedures", "kb_products", "interpretations"):
                 load_corpus(_k)
         except Exception as e:  # noqa: BLE001
             corpus_error = f"{type(e).__name__}: {e}"

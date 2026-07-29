@@ -397,9 +397,9 @@ export default function Admin() {
       {tab === "documents" && (
         <>
           <div className="doc-filter">
-            {["", "laws", "cases", "procedures", "kb_products"].map((k) => (
+            {["", "laws", "cases", "interpretations", "procedures", "kb_products"].map((k) => (
               <button key={k} className={docKind === k ? "active" : ""} onClick={() => setDocKind(k)}>
-                {k === "" ? "전체" : k === "laws" ? "법령" : k === "cases" ? "사례" : k === "procedures" ? "절차" : "KB 상품"}
+                {k === "" ? "전체" : k === "laws" ? "법령" : k === "cases" ? "사례" : k === "interpretations" ? "유권해석" : k === "procedures" ? "절차" : "KB 상품"}
               </button>
             ))}
             <span className="doc-count">{docs.length}건 · 전부 실제 출처 문서</span>

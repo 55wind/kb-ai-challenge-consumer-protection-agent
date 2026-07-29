@@ -7,7 +7,9 @@ from app.corpus.loader import load_corpus
 from app.search import embedder
 from app.search.indexer import HybridIndex, load_index, tokenize
 
-_RRF_K = 60
+# 결합 상수(RRF_K·BM25_WEIGHT)의 근거는 config.py 주석과
+# scripts/tune_retrieval.py 실측에 있다. 모듈 상수로 굳히지 않고 호출 때 읽는다 —
+# 테스트와 튜닝 스크립트가 값을 바꿔 가며 재려면 그래야 한다.
 
 
 class NoEvidenceFound(Exception):
@@ -59,11 +61,13 @@ def rrf_merge(
     bm_hits: list[tuple[str, float]],
     k: int,
 ) -> list[tuple[str, float]]:
+    """벡터·BM25 순위를 RRF로 합친다. BM25는 소수 의견으로만 반영한다."""
+    rrf_k = settings.RRF_K
     scores: dict[str, float] = {}
     for rank, (rid, _) in enumerate(vec_hits):
-        scores[rid] = scores.get(rid, 0.0) + 1.0 / (_RRF_K + rank + 1)
+        scores[rid] = scores.get(rid, 0.0) + 1.0 / (rrf_k + rank + 1)
     for rank, (rid, _) in enumerate(bm_hits):
-        scores[rid] = scores.get(rid, 0.0) + 1.0 / (_RRF_K + rank + 1)
+        scores[rid] = scores.get(rid, 0.0) + settings.BM25_WEIGHT / (rrf_k + rank + 1)
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)[:k]
 
 

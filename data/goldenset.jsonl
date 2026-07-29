@@ -8,15 +8,74 @@
 {"query": "금융회사가 설명의무를 위반하면 손해배상 책임이 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제44조", "금융소비자 보호에 관한 법률-제19조"]}
 {"query": "금융분쟁조정위원회는 어떤 기구인가요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제33조", "금융소비자 보호에 관한 법률-제34조"]}
 {"query": "청약철회하면 돈은 언제 돌려받나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제46조"]}
-{"query": "사모펀드에 가입했는데 원금 손실 위험을 설명받지 못하고 큰 손해를 봤습니다", "kind": "cases", "expected_ids": ["fss-제2022-7호-case_127565_1", "fss-제2022-8호-case_127565_2", "fss-제2021-9호-case_129983_1", "fss-제2025-1호-case_217925_1", "fss-제2025-2호-case_217926_1", "fss-제2025-3호-case_217926_2", "fss-제2023-1호-case_136595_1"]}
+{"query": "권유받은 적 없이 제가 직접 신청했는데, 위험한 파생상품인데도 은행이 제 사정을 전혀 확인하지 않았어요", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제18조", "금융소비자 보호에 관한 법률-제17조"], "derived_from": "금소법 제18조(적정성원칙)"}
+{"query": "계약하고 나서 계약서류를 한 장도 받지 못했습니다", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제23조"], "derived_from": "금소법 제23조(계약서류의 제공의무)"}
+{"query": "대출모집인이 잘못했는데 은행에 책임을 물을 수 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제45조", "금융소비자 보호에 관한 법률-제44조"], "derived_from": "금소법 제45조(직접판매업자의 손해배상책임)"}
+{"query": "분쟁조정을 신청하면 소멸시효가 멈추나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제40조"], "derived_from": "금소법 제40조(시효의 중단)"}
+{"query": "조정이 진행 중인데 금융회사가 소송을 걸어왔어요", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제41조", "금융소비자 보호에 관한 법률-제42조"], "derived_from": "금소법 제41조(소송과의 관계)"}
+{"query": "청구액이 2천만원 이하인 작은 분쟁인데도 금융회사가 소송으로 끌고 갈 수 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제42조", "금융소비자 보호에 관한 법률-제41조"], "derived_from": "금소법 제42조(소액분쟁사건에 관한 특례)"}
+{"query": "조정안을 양쪽이 모두 받아들이면 어떤 효력이 생기나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제39조"], "derived_from": "금소법 제39조(조정의 효력)"}
+{"query": "내 계약과 관련된 자료를 금융회사에 보여달라고 요구할 수 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제28조"], "derived_from": "금소법 제28조(자료의 기록 및 유지·관리 등)"}
+{"query": "조건이 같은데 저만 불리하게 대우받았습니다", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제15조"], "derived_from": "금소법 제15조(차별금지)"}
+{"query": "금융소비자에게 법으로 보장된 권리에는 어떤 것들이 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제7조", "금융소비자 보호에 관한 법률-제8조"], "derived_from": "금소법 제7조(금융소비자의 기본적 권리)"}
+{"query": "등록도 안 된 사람이 대출을 알선해줬는데 문제가 없나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제24조", "금융소비자 보호에 관한 법률-제11조", "금융소비자 보호에 관한 법률-제12조"], "derived_from": "금소법 제24조(미등록자를 통한 판매 대리·중개 금지)"}
+{"query": "상담해준 사람이 은행 직원인지 대리점인지 밝히지 않았어요", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제26조", "금융소비자 보호에 관한 법률-제25조"], "derived_from": "금소법 제26조(판매대리·중개업자의 고지의무 등)"}
+{"query": "집으로 찾아와서 금융상품에 가입하라고 권유했습니다", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제21조의2", "금융소비자 보호에 관한 법률-제16조의2"], "derived_from": "금소법 제21조의2(방문판매 및 전화권유판매 관련 준수사항)"}
+{"query": "금융회사가 법을 어기면 과징금은 어떤 기준으로 매겨지나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제57조", "금융소비자 보호에 관한 법률-제58조"], "derived_from": "금소법 제57조(과징금)"}
+{"query": "설명의무를 위반한 금융회사에는 과태료가 얼마나 부과되나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제69조"], "derived_from": "금소법 제69조(과태료)"}
+{"query": "금융상품은 법에서 어떤 유형으로 나뉘나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제3조", "금융소비자 보호에 관한 법률-제2조"], "derived_from": "금소법 제3조(금융상품의 유형)"}
+{"query": "전문금융소비자와 일반금융소비자는 어떻게 구분하나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제2조", "금융소비자 보호에 관한 법률 시행령-제2조"], "derived_from": "금소법 제2조(정의)"}
+{"query": "여러 회사 금융상품을 한눈에 비교해 볼 수 있는 제도가 있나요?", "kind": "laws", "expected_ids": ["금융소비자 보호에 관한 법률-제32조"], "derived_from": "금소법 제32조(금융상품 비교공시 등)"}
+{"query": "보이스피싱을 당했습니다. 송금한 계좌를 정지시키려면 어떻게 해야 하나요?", "kind": "laws", "expected_ids": ["전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법-제4조", "전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법-제3조"], "derived_from": "통신사기피해환급법 제4조(지급정지)"}
+{"query": "사기 계좌에 남아 있는 돈을 피해자가 돌려받는 절차가 있나요?", "kind": "laws", "expected_ids": ["전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법-제10조", "전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법-제5조", "전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법-제9조", "전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법-제3조"], "derived_from": "통신사기피해환급법 제10조(피해환급금의 결정·지급). 제3조(피해구제의 신청)도 정답에 넣는다 — 질문이 '절차'를 묻고 있고, 환급 절차는 피해구제 신청에서 시작하므로 소비자에게 제3조를 보여주는 것도 옳은 근거다"}
+{"query": "사모펀드에 가입했는데 원금 손실 위험을 설명받지 못하고 큰 손해를 봤습니다", "kind": "cases", "expected_ids": ["fss-제2022-7호-case_127565_1", "fss-제2022-8호-case_127565_2", "fss-제2023-1호-case_129983_1", "fss-제2025-1호-case_217925_1", "fss-제2025-2호-case_217925_2", "fss-제2025-3호-case_217926_1", "fss-제2023-3호-case_136595_1"]}
 {"query": "특정금전신탁 환매가 중단됐는데 판매한 은행에 책임을 물을 수 있나요?", "kind": "cases", "expected_ids": ["fss-제2022-9호-case_127566_1", "fss-제2022-12호-case_127577_1", "fss-제2022-13호-case_127577_2", "fss-제2022-14호-case_127577_3"]}
 {"query": "여행상품을 카드 할부로 결제했는데 취소하고 싶어요. 청약철회 되나요?", "kind": "cases", "expected_ids": ["fss-제2026-1호-case_217927_1", "fss-제2026-2호-case_217927_2"]}
 {"query": "보이스피싱 지급정지를 은행이 늦게 처리해서 피해가 커졌어요", "kind": "cases", "expected_ids": ["fss-제2022-6호-case_64821_1"]}
 {"query": "즉시연금 최저보증이율이 제대로 적용되지 않은 것 같습니다", "kind": "cases", "expected_ids": ["fss-제2017-17호-case_64763_1"]}
 {"query": "태아 상태를 안 알렸다고 보험 계약이 문제가 되나요?", "kind": "cases", "expected_ids": ["fss-제2017-1호-case_64743_1"]}
 {"query": "업무상 질병으로 사망했는데 산재 사망보험금을 받을 수 있나요?", "kind": "cases", "expected_ids": ["fss-제2017-2호-case_64744_1"]}
-{"query": "교통사고 형사합의금도 보험으로 지급되나요?", "kind": "cases", "expected_ids": ["fss-제2026-3호-case_218695_1", "fss-제2026-4호-case_218695_2", "fss-제2026-5호-case_218695_3"]}
+{"query": "교통사고 형사합의금도 보험으로 지급되나요?", "kind": "cases", "expected_ids": ["fss-제2026-3호-case_218695_1", "fss-제2026-4호-case_218695_2", "fss-제2026-5호-case_218695_3", "fss-제2017-4호-case_64746_1"]}
+{"query": "환율 관련 통화옵션 계약을 은행 권유로 맺었는데 설명이 부실했습니다", "kind": "cases", "expected_ids": ["fss-제2019-13호-case_64793_1", "fss-제2019-14호-case_64793_2", "fss-제2019-15호-case_64794_1", "fss-제2019-16호-case_64794_2"], "derived_from": "통화옵션계약 불완전판매 결정례"}
+{"query": "고령인 부모님이 증권사 직원 권유로 옵션상품에 가입해 손해를 봤습니다", "kind": "cases", "expected_ids": ["fss-제2018-04호-case_64773_1", "fss-제2018-05호-case_64774_1"], "derived_from": "고령자 투자자문사 옵션상품 권유 결정례"}
+{"query": "증권사 직원이 주식을 자꾸 사고팔아서 수수료만 빠져나갔어요", "kind": "cases", "expected_ids": ["fss-제2018-03호-case_64772_1"], "derived_from": "지속적 주식 교체매매 권유 결정례"}
+{"query": "계좌를 증권사 직원에게 맡겼다가 임의로 매매돼 손해를 봤습니다", "kind": "cases", "expected_ids": ["fss-제2018-17호-case_64783_1", "fss-제2017-13호-case_64755_1"], "derived_from": "증권계좌 일임 손해배상 결정례"}
+{"query": "비상장주식에 투자하는 신탁에 가입했다가 손실이 났어요", "kind": "cases", "expected_ids": ["fss-제2018-16호-case_64782_1"], "derived_from": "비상장주식 특정금전신탁 불완전판매 결정례"}
+{"query": "즉시연금보험에 가입할 때 연금액 계산 방식을 설명받지 못했습니다", "kind": "cases", "expected_ids": ["fss-제2018-13호-case_64779_1", "fss-제2018-8호-case_64775_1"], "derived_from": "즉시연금 명시·설명의무 위반 결정례"}
+{"query": "해외 원유선물 ETN에 투자했다가 큰 손해를 봤습니다", "kind": "cases", "expected_ids": ["fss-제2017-12호-case_64754_1"], "derived_from": "해외 원유선물 ETN 불완전판매 결정례"}
+{"query": "펀드를 산 계약 자체를 취소하고 낸 돈을 돌려받을 수 있나요?", "kind": "cases", "expected_ids": ["fss-제2020-4호-case_64797_1", "fss-제2020-5호-case_64797_2", "fss-제2020-3호-case_64798_1", "fss-제2020-6호-case_64798_2", "fss-제2021-4호-case_64803_1", "fss-제2021-5호-case_64803_2"], "derived_from": "수익증권 매매계약 취소·부당이득반환 결정례"}
+{"query": "암이 옮겨간 부위로 진단받았는데 원발부위 기준이라며 보험금을 적게 준대요", "kind": "cases", "expected_ids": ["fss-제2019-17호-case_64791_1"], "derived_from": "암보험 원발부위 기준 조항 결정례"}
+{"query": "계약 전 알릴 의무를 위반했다며 보험사가 계약을 해지했습니다", "kind": "cases", "expected_ids": ["fss-제2019-1호-case_64784_1", "fss-제2019-2호-case_64785_1", "fss-제2017-1호-case_64743_1"], "derived_from": "계약 전 알릴 의무 위반 해지 결정례"}
+{"query": "자동차보험에서 이미 받았다고 실손보험금을 안 준다고 합니다", "kind": "cases", "expected_ids": ["fss-제2020-9호-case_64799_1"], "derived_from": "자동차보험·실손의료보험 중복 보상 결정례"}
+{"query": "정신질환을 앓던 가족이 스스로 목숨을 끊었는데 재해사망보험금이 나오나요?", "kind": "cases", "expected_ids": ["fss-제2021-17호-case_64812_1", "fss-제2021-18호-case_64812_2", "fss-제2021-19호-case_64812_3", "fss-제2017-10호-case_64751_1"], "derived_from": "정신질환 상태 자살의 재해사망 해당 여부 결정례"}
+{"query": "윗집 누수로 생긴 피해를 막으려고 쓴 비용도 보험에서 보상되나요?", "kind": "cases", "expected_ids": ["fss-제2020-7호-case_64795_1", "fss-제2020-8호-case_64796_1"], "derived_from": "누수사고 손해방지비용 결정례"}
+{"query": "전동자전거를 탄다는 사실을 알리지 않았는데 보험금이 안 나올까요?", "kind": "cases", "expected_ids": ["fss-제2022-4호-case_64817_1"], "derived_from": "전동자전거 사용 미고지 사망보험금 결정례"}
 {"query": "분쟁조정 신청은 어떻게 하나요?", "kind": "procedures", "expected_ids": ["proc-dispute-mediation"]}
 {"query": "민원 처리 기간은 얼마나 걸리나요?", "kind": "procedures", "expected_ids": ["proc-complaint-filing"]}
 {"query": "분쟁조정 결과에 금융회사가 따르지 않으면 어떻게 되나요?", "kind": "procedures", "expected_ids": ["proc-dispute-mediation"]}
 {"query": "증권사와 분쟁이 있는데 금감원 말고 다른 조정 기관도 있나요?", "kind": "procedures", "expected_ids": ["proc-other-bodies"]}
+{"query": "은행에 먼저 민원을 넣어야 하나요, 바로 금감원에 가도 되나요?", "kind": "procedures", "expected_ids": ["proc-kb-complaint", "proc-complaint-filing"], "derived_from": "KB국민은행 민원 접수와 처리 절차"}
+{"query": "금융분쟁조정위원회는 누가 어떻게 심의하나요?", "kind": "procedures", "expected_ids": ["proc-fdmc-overview"], "derived_from": "금융분쟁조정위원회 개요"}
+{"query": "분쟁조정을 신청할 때 어떤 서류를 준비해야 하나요?", "kind": "procedures", "expected_ids": ["proc-dispute-mediation", "proc-complaint-filing"], "derived_from": "분쟁조정 절차 필요서류"}
+{"query": "합의권고를 받았는데 꼭 받아들여야 하나요?", "kind": "procedures", "expected_ids": ["proc-dispute-mediation"], "derived_from": "분쟁조정 절차 중 합의권고 단계"}
+{"query": "위법계약을 해지하면 이미 낸 수수료도 돌려받나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-1", "금소법FAQ1차-8"], "derived_from": "10문10답 1. 위법계약해지 시 금전반환범위"}
+{"query": "소액분쟁인지 아닌지는 어떤 금액을 기준으로 정하나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-2"], "derived_from": "10문10답 2. 소액분쟁조정의 판단기준"}
+{"query": "직무교육을 받지 않은 직원이 상품을 권유해도 되나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-3"], "derived_from": "10문10답 3. 상품숙지의무 이행기준"}
+{"query": "설명서를 꼭 종이로 줘야 하나요? 앱 화면으로 보여줘도 되나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-4"], "derived_from": "10문10답 4. 설명서 제공방법"}
+{"query": "핵심설명서에는 어떤 내용이 반드시 들어가야 하나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-5"], "derived_from": "10문10답 5. 핵심설명서 작성사항"}
+{"query": "적합성 판단을 한다며 금융회사가 증빙서류까지 내라고 요구할 수 있나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-6"], "derived_from": "10문10답 6. 적합성 원칙 관련 — 본문은 '판매자는 증빙자료를 요구해야 할 의무가 없다'고 답한다. 목차의 '투자성향 평가 결과 변경' 문항은 본문에 별도 서술이 없어 질문을 본문에 맞게 고쳤다"}
+{"query": "금융회사 직원 개인에게도 과태료나 과징금이 부과되나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-7"], "derived_from": "10문10답 7. 과태료·징벌적 과징금 부과 관련"}
+{"query": "새마을금고나 농협에도 금융소비자보호법이 적용되나요?", "kind": "interpretations", "expected_ids": ["금소법10문10답-10"], "derived_from": "10문10답 10. 상호금융 금소법 적용 관련"}
+{"query": "신용카드 현금서비스나 리볼빙도 금소법상 금융상품인가요?", "kind": "interpretations", "expected_ids": ["금소법FAQ1차-2"], "derived_from": "FAQ 1차 Ⅰ-2 선불·직불결제, 현금서비스, 리볼빙"}
+{"query": "비대면으로 가입하면 적합성 원칙은 적용하지 않아도 되나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ1차-7"], "derived_from": "FAQ 1차 Ⅲ-1 비대면 거래 시 적합성 원칙"}
+{"query": "내 성향에 안 맞는 상품이라도 내가 원하면 확인서 쓰고 가입할 수 있나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ2차-5"], "derived_from": "FAQ 2차 Ⅱ-1 부적합한 상품을 소비자가 원할 경우"}
+{"query": "공모펀드는 간이투자설명서만 주면 설명서를 따로 안 줘도 되나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ2차-7"], "derived_from": "FAQ 2차 Ⅱ-3 간이투자설명서와 금소법상 설명서"}
+{"query": "법 시행 전에 만들어 둔 광고물에도 금소법이 적용되나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ2차-9"], "derived_from": "FAQ 2차 Ⅱ-5 법 시행 전 광고물"}
+{"query": "중도 환매가 안 되는 폐쇄형 사모펀드도 위법계약해지가 가능한가요?", "kind": "interpretations", "expected_ids": ["금소법FAQ2차-12"], "derived_from": "FAQ 2차 Ⅲ-3 폐쇄형 사모펀드 위법계약해지"}
+{"query": "변액보험은 보험상품인가요, 투자성 상품인가요?", "kind": "interpretations", "expected_ids": ["금소법FAQ2차-14"], "derived_from": "FAQ 2차 Ⅳ-2 변액보험의 투자성 상품 해당 여부"}
+{"query": "연대보증 대신 자금보충약정을 쓰면 연대보증 금지를 피할 수 있나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ3차-1"], "derived_from": "FAQ 3차 Ⅰ-1 자금보충·조건부채무인수약정"}
+{"query": "자동차보험이나 실손보험을 갱신하는 것도 권유에 해당하나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ3차-7"], "derived_from": "FAQ 3차 Ⅱ-2 자동차·실손보험 갱신의 법적 성격"}
+{"query": "휴대폰 인증이나 PIN 입력도 전자서명으로 인정되나요?", "kind": "interpretations", "expected_ids": ["금소법FAQ3차-12"], "derived_from": "FAQ 3차 Ⅳ-2 전자서명의 범위"}
+{"query": "청약철회권과 투자자 숙려제도는 어떻게 다른가요?", "kind": "interpretations", "expected_ids": ["금소법FAQ3차-9", "금소법FAQ2차-11"], "derived_from": "FAQ 3차 Ⅲ-1 청약철회권과 투자자 숙려제도"}
+{"query": "부당권유행위를 하면 금융회사는 어떤 제재를 받나요?", "kind": "interpretations", "expected_ids": ["금소법설명자료-p39", "금소법설명자료-p38"], "derived_from": "금감원 설명자료 부당권유행위 금지 위반 시 효과"}
+{"query": "전문금융소비자와 일반금융소비자는 보호받는 범위가 어떻게 다른가요?", "kind": "interpretations", "expected_ids": ["금소법설명자료-p9", "금소법설명자료-p8"], "derived_from": "금감원 설명자료 금융소비자의 구분"}

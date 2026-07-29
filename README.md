@@ -8,7 +8,7 @@
 
 ## 핵심 특징
 
-- **100% 실데이터**: 금감원 분쟁조정 결정례 98건, 금소법·시행령·감독규정 216개 조문, FINE 금융용어사전 534개 — 가상·합성 사례를 일절 사용하지 않으며, 스키마 차원에서 출처(source/source_url)를 강제
+- **100% 실데이터**: 금감원 분쟁조정 결정례 98건, 금소법·시행령·감독규정 217개 조문, 금융위·금감원 금소법 FAQ·설명자료 130건, FINE 금융용어사전 534개 — 가상·합성 사례를 일절 사용하지 않으며, 스키마 차원에서 출처(source/source_url)를 강제
 - **완전 로컬 추론**: Ollama + EXAONE 3.5 2.4B (CPU, 4bit) — 민원 속 개인정보가 외부로 나가지 않음
 - **하이브리드 오케스트레이션**: 흐름 제어는 결정론적 코드, sLLM은 이해·생성만 담당 (소형 모델의 약점을 구조로 보완)
 - **근거 인용 강제**: 인용 없는 답변은 거부·재시도, 관련도 미달 시 추측 대신 "근거 없음" + 금감원 1332 안내
@@ -35,10 +35,16 @@ python scripts/build_index.py && python scripts/build_graph.py
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest tests/ -q       # 195 tests
-.venv/Scripts/python scripts/eval_goldenset.py # 검색 품질: hit@3 95% / hit@5 95%
-.venv/Scripts/python scripts/validate_corpus.py# 실데이터 출처 검증
+.venv/Scripts/python -m pytest tests/ -q        # 207 tests
+.venv/Scripts/python scripts/eval_goldenset.py  # 검색 품질: 골든셋 81문항 hit@5 100%
+.venv/Scripts/python scripts/validate_corpus.py # 실데이터 출처 검증
+.venv/Scripts/python scripts/tune_retrieval.py  # 검색기 비중·RRF 상수 재측정
+.venv/Scripts/python scripts/compare_models.py  # 생성 모델 후보 비교 (라이선스 대응)
 ```
+
+골든셋 hit@5 100%는 **회귀 감시선이지 일반화 성능이 아니다.** 81문항은 코퍼스에서
+뽑아 쓴 질문이고 RRF 상수 2개를 이 문항들로 골랐다. 코퍼스·모델을 바꿨을 때
+검색이 나빠졌는지 알아채는 용도로 쓴다.
 
 ## 구조
 
@@ -49,7 +55,7 @@ app/
   search/       KURE-v1 임베딩·FAISS+BM25 인덱스·RRF 검색
   llm/          Ollama 클라이언트
   server/       FastAPI(SSE)·SQLite
-data/corpus/    구조화 실데이터 (laws/cases/procedures/glossary)
+data/corpus/    구조화 실데이터 (laws/cases/interpretations/procedures/kb_products/glossary)
 scripts/        수집·구축·인덱싱·평가
 web/            React 프론트 (/chat, /admin)
 ```
@@ -60,5 +66,15 @@ web/            React 프론트 (/chat, /admin)
 용량이 큰 PDF·PPTX이고 코드와 갱신 주기가 다르다. 별도 산출물 패키지
 (`제출_산출물_v3.zip`)로 관리하며, 실행에 필요한 내용은 `공유_안내.md`에 정리돼 있다.
 
-데이터 출처: 금융감독원(분쟁조정결정례·절차 안내·FINE 용어사전), 국가법령정보센터(금소법 3법령).
+## 라이선스 유의
+
+현재 생성 모델 **EXAONE 3.5는 비상업(NC) 라이선스**다. 대회 참가는 라이선스에
+명시적으로 허용돼 있으나(제2.1(a)조), **상업 서비스 배포는 금지**된다(제3.1조).
+EXAONE 4.0도 같다. 실서비스로 전환하려면 상업 이용이 가능한 모델
+(Mi:dm 2.0 Mini — MIT, Kanana 1.5 — Apache 2.0)로 바꿔야 하며, `GEN_MODEL`
+환경변수 한 줄로 교체된다. 임베딩(KURE-v1)·런타임(Ollama)·인덱스(FAISS)는 모두
+MIT라 제약이 없다. 상세는 산출물 패키지의 `10_라이선스_검토`.
+
+데이터 출처: 금융감독원(분쟁조정결정례·절차 안내·금소법 설명자료·FINE 용어사전),
+금융위원회(금소법 FAQ 1~3차·10問10答), 국가법령정보센터(금소법 3법령 외).
 본 서비스의 답변은 법률 자문이 아닌 정보 제공입니다.

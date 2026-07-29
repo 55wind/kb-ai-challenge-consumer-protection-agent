@@ -8,6 +8,7 @@ from app.config import settings
 from app.corpus.schema import (
     CaseRecord,
     CorpusValidationError,
+    InterpretationDoc,
     LawChunk,
     ProcedureDoc,
     ProductChunk,
@@ -18,9 +19,10 @@ _MODELS = {
     "cases": CaseRecord,
     "procedures": ProcedureDoc,
     "kb_products": ProductChunk,
+    "interpretations": InterpretationDoc,
 }
 
-CorpusKind = Literal["laws", "cases", "procedures", "kb_products"]
+CorpusKind = Literal["laws", "cases", "procedures", "kb_products", "interpretations"]
 
 
 def load_corpus(kind: CorpusKind, corpus_dir: Path | None = None) -> list:

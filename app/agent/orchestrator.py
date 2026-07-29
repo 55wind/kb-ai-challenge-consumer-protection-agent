@@ -245,6 +245,16 @@ def _general_answer(state: SessionState, text: str, llm: OllamaClient,
         # KB 상품 문서는 질문에 따라 소음이 되므로 뒤로 보낸다. 소형 모델은
         # 앞쪽 근거에 주목하므로 순서가 곧 우선순위다.
         hits = _expand_by_citation(text, hits[:3])
+        # 조문 다음이 감독당국 해석이다. 조문은 "무엇이 금지되는가"만 말하고,
+        # "그래서 내 경우가 여기 해당하는가"는 FAQ·설명자료에 문장으로 적혀 있다.
+        # KB 약관보다 앞에 두는 이유는 효력이다 — 당국 해석이 개별 약관에 우선한다.
+        try:
+            hits = hits + retrieve("interpretations", text, k=2)
+        except NoEvidenceFound:
+            pass  # 이 질문을 다룬 유권해석이 없다 — 정상
+        except Exception as e:  # noqa: BLE001
+            print(f"[interpretations] 검색 실패 — 당국 해석 없이 답변합니다: "
+                  f"{type(e).__name__}: {e}", flush=True)
         try:
             hits = hits + retrieve("kb_products", text, k=2)
         except NoEvidenceFound:
