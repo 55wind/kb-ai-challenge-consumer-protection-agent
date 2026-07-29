@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   chatStream,
   createSession,
+  humanError,
   requestDraft,
   sendFeedback,
   type CaseSummary,
@@ -204,7 +205,7 @@ export default function Chat() {
         }
       });
     } catch (e) {
-      push({ kind: "notice", text: String(e), tone: "error" });
+      push({ kind: "notice", text: humanError(e), tone: "error" });
     } finally {
       setBlocks((prev) => prev.filter((b) => b.kind !== "status"));
       setBusy(false);
@@ -219,7 +220,7 @@ export default function Chat() {
       setDraftMd(d.markdown);
       setShowDraftForm(false);
     } catch (e) {
-      push({ kind: "notice", text: String(e), tone: "error" });
+      push({ kind: "notice", text: humanError(e), tone: "error" });
     } finally {
       setBusy(false);
     }

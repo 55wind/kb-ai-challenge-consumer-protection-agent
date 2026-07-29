@@ -87,12 +87,38 @@ class AppContext:
         return self.sessions[session_id]
 
 
+def _warm_embedder() -> None:
+    """임베딩 모델을 기동 때 올려 둔다.
+
+    두 가지를 얻는다.
+
+    1. **실패가 사용자 앞에서 터지지 않는다.** 지연 로드였을 때는 첫 질문이
+       들어온 뒤에야 2GB 모델을 올렸다. 메모리가 부족하면 그 순간 프로세스가
+       죽고, 브라우저에는 이유 없는 "network error"만 뜬다. 서버 로그에도
+       파이썬 예외가 아니라 접근 위반이 남아 원인을 알기 어렵다. 기동 때
+       올리면 같은 실패가 배포 시점에, 로그와 함께 드러난다.
+    2. 첫 사용자가 콜드 로드 10초대를 혼자 부담하지 않는다.
+
+    실패해도 기동은 계속한다 — 검색이 안 되는 상태라도 /api/health가 살아 있어야
+    운영자가 원인을 조회할 수 있다. health의 `indexes` 항목이 이미 이를 보고한다.
+    """
+    try:
+        from app.search.embedder import embed
+        embed(["기동 확인"])
+    except Exception as e:  # noqa: BLE001 - 기동을 막지 않는다
+        print(f"[기동] 임베딩 모델 적재 실패 — 검색이 동작하지 않습니다: "
+              f"{type(e).__name__}: {e}", flush=True)
+        print("[기동] 메모리 부족(OSError 1455 등)이면 가상 메모리를 늘리거나 "
+              "다른 인스턴스를 줄이세요. 모델 적재에 2GB 이상이 필요합니다.", flush=True)
+
+
 def create_app(context: AppContext | None = None) -> FastAPI:
     app = FastAPI(title="금융 소비자 보호 에이전트")
     ctx = context or AppContext()
     if ctx.conn is None:
         ctx.conn = db.connect()
         db.sync_documents(ctx.conn)
+        _warm_embedder()
     app.state.ctx = ctx
 
     app.add_middleware(

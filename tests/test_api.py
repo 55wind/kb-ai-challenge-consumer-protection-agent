@@ -143,3 +143,33 @@ def test_llm_slot_released_after_failure(tmp_path, monkeypatch):
     from app.config import settings as cfg
 
     assert ctx.llm_slots._value == cfg.LLM_MAX_CONCURRENT
+
+
+def test_startup_warms_embedder(monkeypatch, tmp_path):
+    """임베딩 모델은 기동 때 올린다 — 실패가 첫 사용자 질문에서 터지지 않게.
+
+    지연 로드였을 때 메모리 부족이 나면 프로세스가 통째로 죽고, 브라우저에는
+    이유 없는 "network error"만 남았다.
+    """
+    from app.server import api as api_mod
+
+    called = []
+    monkeypatch.setattr(api_mod, "_warm_embedder", lambda: called.append(True))
+    monkeypatch.setattr(api_mod.settings, "DB_PATH", tmp_path / "warm.db")
+    api_mod.create_app()
+    assert called, "기동에서 임베딩 워밍업이 호출되지 않았다"
+
+
+def test_startup_survives_embedder_failure(monkeypatch, capsys):
+    """모델을 못 올려도 기동은 계속된다 — 운영자가 /api/health로 원인을 봐야 한다."""
+    from app.search import embedder
+    from app.server import api as api_mod
+
+    def boom(_texts):
+        raise OSError("이 작업을 완료하기 위한 페이징 파일이 너무 작습니다.")
+
+    monkeypatch.setattr(embedder, "embed", boom)
+    api_mod._warm_embedder()          # 예외가 밖으로 나오면 기동이 죽는다
+    out = capsys.readouterr().out
+    assert "임베딩 모델 적재 실패" in out
+    assert "메모리" in out, "운영자가 다음에 뭘 할지 알 수 있어야 한다"
