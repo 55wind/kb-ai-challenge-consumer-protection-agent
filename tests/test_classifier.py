@@ -48,3 +48,25 @@ def test_classify_falls_back_on_unknown_category():
     llm = StubLLM('{"category": "우주여행", "is_dispute": false}')
     result = classify("펀드 설명을 못 들었어요", llm)
     assert result.confidence == "low"
+
+
+def test_prompt_includes_candidate_descriptions(monkeypatch):
+    """후보를 이름만 주지 말고 설명과 함께 준다.
+
+    '불완전판매'가 설명의무 위반을 가리킨다는 것은 이 분류 체계의 약속이지
+    낱말에서 자명하게 나오는 뜻이 아니다. 이름만 주면 모델이 추측해야 한다.
+    결정례 60건 실측에서 설명을 붙이자 80.0% → 83.3%였다.
+    """
+    from app.agent import classifier as clf
+
+    seen = {}
+
+    class Spy:
+        def generate(self, system, prompt, **kw):
+            seen["prompt"] = prompt
+            return '{"category": "보험", "is_dispute": false}'
+
+    monkeypatch.setattr(clf, "_candidates", lambda t, top=2: ["보험", "카드"])
+    clf.classify("보험금을 안 준대요", Spy())
+    assert clf.CATEGORIES["보험"] in seen["prompt"], "후보 설명이 프롬프트에 없다"
+    assert clf.CATEGORIES["카드"] in seen["prompt"], "두 번째 후보 설명이 빠졌다"

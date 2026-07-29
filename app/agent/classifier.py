@@ -49,7 +49,17 @@ def classify(text: str, llm: OllamaClient) -> Classification:
         '형식: {"category": "<후보 중 하나>", "is_dispute": true|false}. '
         "is_dispute는 금융회사와의 다툼·피해구제 요구(분쟁성)이면 true, 단순 정보 문의면 false."
     )
-    prompt = f"민원 내용: {text}\n\n후보 유형: {cands}\n어느 유형인가?"
+    # 후보를 이름만 주지 않고 **설명과 함께** 준다.
+    #
+    # 이름만 주면(`['불완전판매', '보험']`) 모델이 그 이름의 뜻을 스스로 추측해야
+    # 한다. 예컨대 '불완전판매'가 설명의무 위반을 가리킨다는 것은 이 분류 체계의
+    # 약속이지 낱말에서 자명하게 나오는 뜻이 아니다. 설명은 CATEGORIES에 이미
+    # 있으니 안 줄 이유가 없다.
+    #
+    # 결정례 60건 실측: 80.0% → 83.3% (`scripts/experiment_classifier.py`).
+    # 후보를 고르는 단계는 건드리지 않으므로 회수율에는 영향이 없다.
+    listed = "\n".join(f"- {c}: {CATEGORIES[c]}" for c in cands)
+    prompt = f"민원 내용: {text}\n\n후보 유형:\n{listed}\n\n어느 유형인가?"
     raw = llm.generate(system, prompt, json_mode=True, timeout=60)
     try:
         data = json.loads(raw)
