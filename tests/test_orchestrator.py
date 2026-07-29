@@ -153,3 +153,47 @@ def test_llm_unavailable_event(monkeypatch):
     monkeypatch.setattr(orchestrator.classifier, "classify", raise_unavailable)
     events = list(handle_message(SessionState(), "질문", StubLLM()))
     assert events[-1].type == "error"
+
+
+def test_interpretations_reach_both_paths(monkeypatch):
+    """유권해석 근거는 법령 경로와 절차 경로 **둘 다**에 붙어야 한다.
+
+    법령 경로에만 붙였다가 실제로 답을 놓쳤다. "설명서를 종이로 안 주고 앱
+    화면으로만 보여줬는데 이게 맞나요?"가 `절차문의`로 분류돼 절차 경로로 갔고,
+    민원 접수 절차 문서만 근거로 잡혀 "그런 언급은 없습니다"라고 답했다.
+    정답(10문10답 4번)은 코퍼스에 있었는데 경로가 그것을 못 보게 막고 있었다.
+    분류는 100%가 아니므로, 경로가 갈려도 근거가 사라지지 않아야 한다.
+    """
+    asked: list[str] = []
+
+    def fake_retrieve(kind, q, **kw):
+        asked.append(kind)
+        return ["hit"]
+
+    monkeypatch.setattr(orchestrator, "retrieve", fake_retrieve)
+    monkeypatch.setattr(orchestrator, "_expand_by_citation", lambda text, hits: hits)
+    monkeypatch.setattr(orchestrator.answerer, "answer_events",
+                        lambda q, h, llm: iter([("answer", _answer())]))
+
+    # 분류가 어디로 보내든 유권해석은 따라와야 한다.
+    for category, expected_primary in [("예금·계좌", "laws"), ("절차문의", "procedures")]:
+        asked.clear()
+        monkeypatch.setattr(orchestrator.classifier, "classify",
+                            lambda t, llm, _c=category: Classification(_c, False, "high"))
+        list(handle_message(SessionState(), "설명서를 앱 화면으로만 봤는데 맞나요?", StubLLM()))
+        assert expected_primary in asked, f"{category}: 1차 근거 종류가 {expected_primary}가 아니다"
+        assert "interpretations" in asked, f"{category} 경로에서 유권해석이 빠졌다"
+
+
+def test_add_evidence_survives_broken_index(monkeypatch, capsys):
+    """보조 근거 검색이 고장 나도 답변은 나가되, 로그는 남는다."""
+    from app.agent import orchestrator as orch
+    from app.search.retriever import Hit
+
+    def boom(kind, text, k=5):
+        raise RuntimeError("인덱스 손상")
+
+    monkeypatch.setattr(orch, "retrieve", boom)
+    base = [Hit(record_id="x", score=1.0, record=object())]
+    assert orch._add_evidence(base, "interpretations", "질문", k=2) == base
+    assert "검색 실패" in capsys.readouterr().out

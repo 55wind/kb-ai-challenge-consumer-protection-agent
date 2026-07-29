@@ -236,6 +236,23 @@ def _law_records() -> dict:
     return _get_records("laws")
 
 
+def _add_evidence(hits: list[Hit], kind: str, text: str, k: int) -> list[Hit]:
+    """보조 근거를 뒤에 덧붙인다. 실패해도 답변을 막지 않는다.
+
+    근거가 없는 것(NoEvidenceFound)과 검색이 고장 난 것을 구분해서 다룬다.
+    전자는 정상이라 조용히 넘기고, 후자는 로그를 남긴다 — 조용히 넘기면 그
+    근거가 통째로 빠진 답변이 계속 나가는데 운영자는 기능이 죽은 줄 모른다.
+    """
+    try:
+        return hits + retrieve(kind, text, k=k)
+    except NoEvidenceFound:
+        return hits  # 이 질문과 관련된 문서가 없다 — 정상
+    except Exception as e:  # noqa: BLE001
+        print(f"[{kind}] 검색 실패 — 이 근거 없이 답변합니다: "
+              f"{type(e).__name__}: {e}", flush=True)
+        return hits
+
+
 def _general_answer(state: SessionState, text: str, llm: OllamaClient,
                     kind: str = "laws") -> Iterator[AgentEvent]:
     yield AgentEvent("status", {"message": "관련 규정과 사례를 찾고 있습니다..."})
@@ -245,25 +262,21 @@ def _general_answer(state: SessionState, text: str, llm: OllamaClient,
         # KB 상품 문서는 질문에 따라 소음이 되므로 뒤로 보낸다. 소형 모델은
         # 앞쪽 근거에 주목하므로 순서가 곧 우선순위다.
         hits = _expand_by_citation(text, hits[:3])
-        # 조문 다음이 감독당국 해석이다. 조문은 "무엇이 금지되는가"만 말하고,
-        # "그래서 내 경우가 여기 해당하는가"는 FAQ·설명자료에 문장으로 적혀 있다.
-        # KB 약관보다 앞에 두는 이유는 효력이다 — 당국 해석이 개별 약관에 우선한다.
-        try:
-            hits = hits + retrieve("interpretations", text, k=2)
-        except NoEvidenceFound:
-            pass  # 이 질문을 다룬 유권해석이 없다 — 정상
-        except Exception as e:  # noqa: BLE001
-            print(f"[interpretations] 검색 실패 — 당국 해석 없이 답변합니다: "
-                  f"{type(e).__name__}: {e}", flush=True)
-        try:
-            hits = hits + retrieve("kb_products", text, k=2)
-        except NoEvidenceFound:
-            pass  # 이 질문과 관련된 KB 상품 문서가 없다 — 정상
-        except Exception as e:  # noqa: BLE001
-            # 인덱스 부재·손상은 정상이 아니다. 조용히 넘기면 KB 약관 근거가
-            # 통째로 빠진 답변이 계속 나가는데 운영자는 기능이 죽은 줄 모른다.
-            print(f"[kb_products] 검색 실패 — KB 약관 근거 없이 답변합니다: "
-                  f"{type(e).__name__}: {e}", flush=True)
+
+    # 감독당국 해석은 **두 경로 모두에** 붙인다. 조문은 "무엇이 금지되는가"만
+    # 말하고, "그래서 내 경우가 여기 해당하는가"는 FAQ·설명자료에 문장으로 적혀
+    # 있다.
+    #
+    # 법령 경로에만 붙였다가 실제로 답을 놓쳤다. "설명서를 종이로 안 주고 앱
+    # 화면으로만 보여줬는데 이게 맞나요?"가 `절차문의`로 분류돼 절차 경로로 갔고,
+    # 민원 접수 절차 문서 네 건만 근거로 잡혀 "그런 언급은 없습니다"라고 답했다.
+    # 정답(10문10답 4번 — 전자적 장치 화면 표시도 설명서 제공에 포함)은 코퍼스에
+    # 있었는데 경로가 그것을 못 보게 막고 있었다. 분류가 흔들려도 근거가 사라지지
+    # 않게 하려면 이쪽이 맞다.
+    hits = _add_evidence(hits, "interpretations", text, k=2)
+    if kind == "laws":
+        # KB 약관은 당국 해석 뒤에 둔다 — 효력 순서다.
+        hits = _add_evidence(hits, "kb_products", text, k=2)
     try:
         ans = None
         for kind, value in answerer.answer_events(text, hits, llm):
