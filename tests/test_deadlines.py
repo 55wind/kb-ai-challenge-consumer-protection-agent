@@ -257,3 +257,33 @@ def test_product_type_confirmed_card_is_not_marked_tentative(monkeypatch):
     card = next(i for i in items if "보장성 상품 청약철회" in i.action)
     assert not card.tentative, "상품유형이 정한 카드가 추측으로 표시됐다"
     assert "해당될 경우" not in card.urgency_note
+
+
+def test_law_citation_is_cached(monkeypatch):
+    """같은 근거 질의로 검색을 두 번 돌리지 않는다.
+
+    `basis_query`는 RULES 테이블의 고정 상수인데, 캐시가 없을 때는 기한 카드마다
+    하이브리드 검색(임베딩 + FAISS + BM25)을 새로 돌렸다. 카드가 4~6장이라
+    질의 한 건에 그만큼이 사용자 대기 시간으로 얹혔다 — 실측 0.99초 → 0.20초.
+
+    이 캐시가 조용히 빠지면 지연이 5배로 돌아오는데 기능은 멀쩡해서 눈에 띄지
+    않는다. 그래서 호출 횟수로 고정한다.
+    """
+    from app.agent import deadlines as dl
+
+    calls: list[str] = []
+    real = dl.retrieve
+
+    def counting(kind, query, k=5):
+        calls.append(query)
+        return real(kind, query, k=k)
+
+    dl._law_citation.cache_clear()
+    monkeypatch.setattr(dl, "retrieve", counting)
+    dl.compute_deadlines("보험", "2026년 7월 20일", today=TODAY)
+    first = len(calls)
+    assert first > 0, "근거 조문을 아예 찾지 않았다"
+
+    dl.compute_deadlines("보험", "2026년 7월 20일", today=TODAY)
+    assert len(calls) == first, f"같은 질의로 검색을 다시 돌렸다 ({first} → {len(calls)})"
+    dl._law_citation.cache_clear()

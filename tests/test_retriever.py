@@ -64,16 +64,22 @@ def test_deadlines_survive_missing_index(monkeypatch, tmp_path):
     """인덱스가 없어도 골든타임 카드는 나온다 (근거 링크만 빠진다)."""
     from datetime import date
 
-    from app.agent.deadlines import compute_deadlines
+    from app.agent import deadlines as dl
     from app.config import settings
 
     monkeypatch.setattr(settings, "INDEX_DIR", tmp_path)
     retriever._index_cache.clear()
-    items = compute_deadlines("불완전판매", "2026년 7월 1일", today=date(2026, 7, 23))
+    # 근거 조문 캐시도 함께 비운다. 그 캐시의 수명은 인덱스와 같기 때문이다 —
+    # 앞선 테스트가 채워 둔 것이 남아 있으면 "인덱스가 없는데 근거가 붙는" 상태가
+    # 된다. 운영에서는 `_index_cache`가 비워지지 않아(관리자 재구축은 그래프만
+    # 건드린다) 이 어긋남이 생기지 않는다.
+    dl._law_citation.cache_clear()
+    items = dl.compute_deadlines("불완전판매", "2026년 7월 1일", today=date(2026, 7, 23))
     assert items, "기한 항목이 비면 안 된다"
     assert all(i.law_citation is None for i in items)
     assert any(i.computed_deadline for i in items)
     retriever._index_cache.clear()
+    dl._law_citation.cache_clear()
 
 
 def test_bm25_only_docs_lose_to_vector_top3():

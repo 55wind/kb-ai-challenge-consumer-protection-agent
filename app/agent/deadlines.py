@@ -12,6 +12,7 @@
 import re
 from dataclasses import dataclass
 from datetime import date, timedelta
+from functools import lru_cache
 from typing import Literal
 
 from app.agent.answerer import Citation
@@ -224,7 +225,18 @@ def _safe_date(y: int, mo: int, d: int) -> date | None:
         return None
 
 
+@lru_cache(maxsize=64)
 def _law_citation(query: str) -> Citation | None:
+    """기한 룰의 근거 조문. **결과를 캐시한다.**
+
+    `basis_query`는 `RULES` 테이블에 박힌 고정 문자열이고 종류가 10여 개뿐인데,
+    캐시가 없을 때는 기한 카드마다 하이브리드 검색(임베딩 + FAISS + BM25)을 새로
+    돌렸다. 질의 한 건에 카드가 4~6장 뜨므로 사용자 대기 시간에 그만큼이 얹혔다.
+
+    같은 문자열이 같은 조문을 돌려주는 것은 인덱스가 바뀌지 않는 한 보장된다.
+    인덱스는 프로세스 기동 때 한 번 적재되므로(`retriever._index_cache`) 캐시의
+    수명이 그것과 같다. 관리자 그래프 재구축은 `laws` 인덱스를 바꾸지 않는다.
+    """
     try:
         hits = retrieve("laws", query, k=1)
     except NoEvidenceFound:
