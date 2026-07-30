@@ -245,3 +245,55 @@ def test_case_titles_keep_their_spacing():
     spaced = sum(" " in r["title"] for r in rows)
     assert spaced / len(rows) >= 0.85, (
         f"공백이 있는 제목이 {spaced}/{len(rows)}건뿐이다 — 본문 표제 복원이 끊겼다")
+
+
+def test_category_accuracy_stays_above_the_bar():
+    """민원유형 10종 분류가 기준 아래로 내려가면 실패한다.
+
+    금감원 사례집 라벨 394건에서 top-1 92.6% · top-2 95.7%다. 2순위는 버려지지
+    않는다 — 그 유형의 법정 기한 카드를 「해당될 수 있음」으로 함께 띄우므로
+    (`deadlines.compute_deadlines`) 2순위가 맞는지가 사용자가 기한을 받는지를 좌우한다.
+
+    기준을 top-1 0.88 / top-2 0.92로 둔다. 실측보다 낮게 잡아 정상 변동에는 울지
+    않되, 상품유형 경유가 끊기면(임베딩만으로 돌아가면 64.5%) 잡히게 한다.
+    """
+    import json
+
+    from app.agent import classifier
+    from app.config import settings
+
+    path = settings.DATA_DIR / "classifier_goldset.jsonl"
+    if not path.exists():
+        import pytest as _pytest
+        _pytest.skip("scripts/build_classifier_goldset.py 미실행")
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    assert len(rows) >= 300
+    h1 = h2 = 0
+    for r in rows:
+        ranked = classifier.rank_categories(r["query"], top=2)
+        h1 += ranked[0] == r["category"]
+        h2 += r["category"] in ranked
+    n = len(rows)
+    assert h1 / n >= 0.88, f"top-1 {h1 / n:.1%} — 상품유형 경유가 끊겼는지 보라"
+    assert h2 / n >= 0.92, f"top-2 {h2 / n:.1%}"
+
+
+def test_process_inquiries_do_not_collapse():
+    """상품 축이 없는 유형이 상품유형 경유로 사라지지 않는다.
+
+    사례집 정답지에 `절차문의`가 0건이라 **그 정답지로는 이 붕괴가 보이지 않는다.**
+    방어를 넣기 전 감독당국 편철 프로브에서 top-1이 38.5%까지 떨어졌다.
+    """
+    import json
+
+    from app.agent import classifier
+    from app.config import settings
+
+    path = settings.DATA_DIR / "classifier_probe.jsonl"
+    if not path.exists():
+        import pytest as _pytest
+        _pytest.skip("data/classifier_probe.jsonl 없음")
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    hit2 = sum(r["category"] in classifier.rank_categories(r["query"], top=2) for r in rows)
+    assert hit2 / len(rows) >= 0.85, (
+        f"프로브 top-2 {hit2 / len(rows):.1%} — 상품 축이 없는 유형이 밀려났다")
