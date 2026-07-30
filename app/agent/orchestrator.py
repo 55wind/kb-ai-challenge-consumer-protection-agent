@@ -46,6 +46,8 @@ class AgentEvent:
 class SessionState:
     dialog: list[dict] = field(default_factory=list)
     category: str = ""
+    # 분류 2순위. 기한 카드를 "해당될 수 있음"으로 함께 노출하는 데만 쓴다.
+    alt_category: str | None = None
     slots_filled: dict[str, str] = field(default_factory=dict)
     evidence_timeline: "transcript_mod.EvidenceTimeline | None" = None
 
@@ -172,6 +174,7 @@ def _handle_chat(state: SessionState, text: str, llm: OllamaClient) -> Iterator[
     yield AgentEvent("status", {"message": "문의 유형을 파악하고 있습니다..."})
     cls = classifier.classify(text, llm)
     state.category = cls.category
+    state.alt_category = cls.alt_category
     yield AgentEvent("classification", {"category": cls.category, "is_dispute": cls.is_dispute})
 
     if cls.category == "절차문의":
@@ -333,6 +336,7 @@ def _dispute_flow(state: SessionState, text: str, llm: OllamaClient) -> Iterator
         state.category, slots.filled.get("when", ""),
         situation_text=text or " ".join(
             v for k, v in slots.filled.items() if k != "when"),
+        alt_category=state.alt_category,
     )
     if deadline_items:
         yield AgentEvent(
@@ -345,6 +349,7 @@ def _dispute_flow(state: SessionState, text: str, llm: OllamaClient) -> Iterator
                         "computed_deadline": d.computed_deadline,
                         "urgency": d.urgency,
                         "urgency_note": d.urgency_note,
+                        "tentative": d.tentative,
                         "law_citation": _citations_payload([d.law_citation])[0] if d.law_citation else None,
                     }
                     for d in deadline_items

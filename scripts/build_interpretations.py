@@ -118,6 +118,13 @@ DOCS = [
         "https://www.fss.or.kr/fss/bbs/B0000112/list.do?menuNo=200140",
         "해설",
     ),
+    SourceDoc(
+        "230918_금융소비자용 금소법 안내자료_f.pdf",
+        "금소법소비자안내",
+        "금융감독원 「금융소비자용 금융소비자보호법 안내자료」 2023.9.",
+        "https://www.fss.or.kr/fss/bbs/B0000112/list.do?menuNo=200140",
+        "안내",
+    ),
 ]
 
 
@@ -241,6 +248,76 @@ def parse_guide(doc: SourceDoc) -> list[dict]:
     return records
 
 
+# 답변 본문이 시작되는 지점을 찾는 창. 소비자용 안내자료는 PDF 추출에서
+# **질문은 띄어쓰기가 남고 답변은 붙어 나온다.** 이 창 길이만큼 공백이 없으면
+# 답변에 들어선 것으로 본다.
+_NOSPACE_WINDOW = 25
+
+
+def parse_consumer_guide(doc: SourceDoc) -> list[dict]:
+    """소비자용 안내자료 — 질문이 **구어체**인 문답집.
+
+    이 문서를 한동안 놓치고 있었다. 앞 두 쪽만 열어 보고 "이미지 PDF"라고 단정한
+    탓이다. 실제로는 표지·목차(1~12쪽)만 이미지고 **본문 13쪽부터 텍스트가 나온다.**
+
+    놓친 대가가 컸다. 다른 코퍼스는 전부 법률 문어체다 — 조문, 결정례, 업권
+    실무자용 FAQ. 이 문서만 소비자에게 하는 말로 쓰여 있다.
+
+        「금융상품 거래를 되돌릴 수 있나요(청약철회권)?」
+        「설명 내용이 어려운 경우 어떻게 하나요?」
+        「금융분쟁조정제도가 무엇인지 궁금해요」
+
+    **경계 판별.** PDF 추출에서 질문은 띄어쓰기가 남고 답변은 붙어 나온다
+    (「금융상품은 어떻게 구분하나요?금소법에서는모든금융상품을…」). 그래서
+    공백 없는 구간이 처음 나타나는 지점을 답변 시작으로 본다. 물음표에
+    의존하지 않는 이유는 「…궁금해요」·「…알고 싶어요」로 끝나는 문항이 있어서다.
+    """
+    records: list[dict] = []
+    for i, text in enumerate(_body_pages(_pages(RAW_DIR / doc.filename)), 1):
+        text = text.strip()
+        if len(text) < 60:
+            continue  # 도표·간지만 있는 쪽
+
+        # 물음표가 있으면 그것이 경계다. 공백 기준만 쓰면 「금융소비자보호법이
+        # 무엇인가요?2019년고위험…」에서 '무엇인가요?'가 답변 쪽으로 넘어간다 —
+        # 물음표 뒤로 공백 없는 구간이 바로 이어지기 때문이다.
+        m = re.search(r"\?", text[:160])
+        if m:
+            cut = m.end()
+        else:
+            # 물음표 없이 끝나는 문항이 있다 —「…무엇인지 궁금해요」「…알고 싶어요」.
+            m = re.search(r"(궁금해요|알고 ?싶어요|알려주세요)", text[:160])
+            cut = m.end() if m else next(
+                (j for j in range(len(text) - _NOSPACE_WINDOW)
+                 if " " not in text[j:j + _NOSPACE_WINDOW]),
+                0,
+            )
+        question, answer = text[:cut].strip(), text[cut:].strip()
+        # 자간을 벌려 조판한 제목이 있다(「6대  판 매 원 칙 은 …」). 공백 비율이
+        # 지나치면 낱자 조판으로 보고 전부 붙인다 — 답변 본문과 같은 모양이 된다.
+        if question and question.count(" ") / len(question) > 0.35:
+            question = question.replace(" ", "")
+        question = re.sub(r"\s+", " ", question).strip(" ·▪◦")
+
+        if len(question) < 8 or len(answer) < 40:
+            # 질문이 없는 쪽은 앞 문항의 답변이 넘어온 것이다.
+            if records:
+                records[-1]["text"] += " " + re.sub(r"\s+", " ", text)
+            continue
+
+        records.append({
+            "id": f"{doc.doc_id}-{len(records) + 1}",
+            "source": doc.source,
+            "source_url": doc.source_url,
+            "doc_type": doc.kind,
+            "topic": doc.doc_id,
+            "title": question,
+            "text": answer,
+            "cited_articles": _cited_articles(answer),
+        })
+    return records
+
+
 def main() -> int:
     all_records: list[dict] = []
     for doc in DOCS:
@@ -248,7 +325,12 @@ def main() -> int:
         if not path.exists():
             print(f"  [건너뜀] 원본 없음: {doc.filename}")
             continue
-        recs = parse_faq(doc) if doc.kind == "FAQ" else parse_guide(doc)
+        if doc.kind == "FAQ":
+            recs = parse_faq(doc)
+        elif doc.kind == "안내":
+            recs = parse_consumer_guide(doc)
+        else:
+            recs = parse_guide(doc)
         print(f"  {doc.doc_id}: {len(recs)}건")
         all_records.extend(recs)
 

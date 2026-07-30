@@ -202,3 +202,39 @@ def test_deadlines_survive_product_type_failure(monkeypatch, capsys):
     items = dl.compute_deadlines("불완전판매", "", situation_text="펀드 손실")
     assert items, "추정 실패로 기한 안내가 통째로 사라졌다"
     assert "상품유형 추정 실패" in capsys.readouterr().out
+
+
+# ── 인접 유형 기한 함께 노출 ─────────────────────────────────────
+def test_alt_category_deadlines_are_marked_tentative():
+    """분류 2순위의 기한도 준다. 단, '해당될 수 있음'으로 구분된다.
+
+    분류 recall@1은 금감원 라벨 기준 57%대인데 recall@2는 72%대다. 1순위만 쓰면
+    그 차이만큼 법정 기한 카드가 사라지고, 카드가 사라지는 것은 보수적 방향이
+    아니다. 반대로 확정 카드와 섞어 놓으면 화면이 사실을 과장한다.
+    """
+    items = compute_deadlines(
+        "대출·금리", "2026년 7월 20일", today=TODAY,
+        alt_category="보이스피싱·전자금융사기",
+    )
+    by_action = {i.action: i for i in items}
+    urgent = next(a for a in by_action if "지급정지" in a)
+    assert by_action[urgent].tentative, "2순위 카드는 tentative로 표시돼야 한다"
+    assert "해당될 경우" in by_action[urgent].urgency_note
+    own = next(a for a in by_action if "대출성 상품 청약철회" in a)
+    assert not by_action[own].tentative, "1순위 카드는 확정으로 남아야 한다"
+
+
+def test_alt_category_does_not_duplicate_shared_rules():
+    """공통 룰(_common)은 2순위 때문에 두 번 뜨지 않는다."""
+    items = compute_deadlines(
+        "불완전판매", "2026년 7월 20일", today=TODAY, alt_category="투자상품",
+    )
+    actions = [i.action for i in items]
+    assert len(actions) == len(set(actions)), f"중복 카드: {actions}"
+
+
+def test_alt_category_same_as_category_is_noop():
+    base = compute_deadlines("보험", "2026년 7월 20일", today=TODAY)
+    same = compute_deadlines("보험", "2026년 7월 20일", today=TODAY, alt_category="보험")
+    assert [i.action for i in base] == [i.action for i in same]
+    assert not any(i.tentative for i in same)

@@ -34,7 +34,11 @@ def _stub_embeddings(monkeypatch):
 def test_classify_uses_llm_choice():
     llm = StubLLM('{"category": "보이스피싱·전자금융사기", "is_dispute": true}')
     result = classify("보이스피싱을 당해서 돈이 빠져나갔어요", llm)
-    assert result == Classification("보이스피싱·전자금융사기", True, "high")
+    assert (result.category, result.is_dispute, result.confidence) == (
+        "보이스피싱·전자금융사기", True, "high")
+    # 채택되지 않은 후보가 남아야 한다 — 기한 카드를 "해당될 수 있음"으로 함께
+    # 노출하는 데 쓴다(deadlines.compute_deadlines 설명).
+    assert result.alt_category and result.alt_category != result.category
 
 
 def test_classify_falls_back_on_bad_json():

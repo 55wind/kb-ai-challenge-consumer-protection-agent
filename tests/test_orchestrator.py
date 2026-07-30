@@ -120,7 +120,7 @@ def test_dispute_flow_emits_deadlines_before_outlook(monkeypatch):
         orchestrator.deadlines_mod, "compute_deadlines",
         # situation_text를 함께 받는다 — 청약철회는 민원 유형이 아니라 상품유형으로
         # 고르기 때문이다(deadlines.compute_deadlines 설명 참조).
-        lambda cat, when, situation_text=None: [
+        lambda cat, when, situation_text=None, alt_category=None: [
             DeadlineItem(action="지급정지", period="즉시", computed_deadline=None,
                          urgency="urgent", law_citation=None, urgency_note="지금")],
     )

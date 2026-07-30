@@ -57,10 +57,19 @@ def _goldenset() -> list[dict]:
     return [json.loads(x) for x in (ROOT / "data/goldenset.jsonl").open(encoding="utf-8")]
 
 
-def _deadline_set(category: str) -> frozenset[str]:
-    """그 유형에서 안내되는 기한 항목. 유형이 틀리면 이것이 달라진다."""
-    from app.agent.deadlines import RULES
-    return frozenset(r.action for r in RULES.get(category, []) + RULES["_common"])
+def _deadline_set(category: str, situation: str, alt: str | None = None) -> frozenset[str]:
+    """그 유형에서 **실제로 화면에 뜨는** 기한 항목.
+
+    예전에는 `RULES.get(category)`를 직접 읽었다. 그러면 `compute_deadlines`의
+    상품유형 경로(제46조①, `product_type.infer`)를 건너뛴다 — 앱은
+    `orchestrator.py`에서 `situation_text`를 넘겨 청약철회를 상품유형으로 고르는데,
+    평가는 민원 유형으로 고르고 있었다. 그래서 "기한 누락"이 실제보다 크게 찍혔다.
+
+    측정은 앱이 하는 것과 같아야 한다. 같은 인자로 `compute_deadlines`를 부른다.
+    """
+    from app.agent.deadlines import compute_deadlines
+    return frozenset(i.action for i in compute_deadlines(
+        category, "", situation_text=situation, alt_category=alt))
 
 
 def eval_classification(llm, limit: int) -> dict:
@@ -85,7 +94,14 @@ def eval_classification(llm, limit: int) -> dict:
             continue
 
         confusion[(gold, c.category)] += 1
-        want, got = _deadline_set(gold), _deadline_set(c.category)
+        # 상품유형은 민원 텍스트로 추정하므로 정답/예측 양쪽에 같은 텍스트를 준다 —
+        # 달라지는 것은 민원 유형 하나뿐이어야 오분류의 영향만 분리된다.
+        #
+        # `want`는 **정답 유형이었다면 떠야 할 카드**, `got`은 **실제로 뜨는 카드**다.
+        # 실제로 뜨는 쪽에는 분류 2순위 카드가 포함된다("해당될 수 있음"으로 표시).
+        # 여기에 alt를 안 넘기면 앱이 이미 안내하는 카드를 누락으로 세게 된다.
+        want = _deadline_set(gold, text)
+        got = _deadline_set(c.category, text, alt=c.alt_category)
         if c.category == "절차문의" or gold == "절차문의":
             misrouted += 1          # 상담이 아니라 절차 안내 경로로 빠진다
         elif want == got:

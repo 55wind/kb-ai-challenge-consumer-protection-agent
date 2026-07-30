@@ -80,6 +80,8 @@ export interface DeadlineItem {
   computed_deadline: string | null;
   urgency: "expired" | "urgent" | "ok" | "unknown";
   urgency_note: string;
+  // 분류 2순위에서 온 카드. 확정된 기한과 섞어 보이면 화면이 사실을 과장한다.
+  tentative?: boolean;
   law_citation: Citation | null;
 }
 

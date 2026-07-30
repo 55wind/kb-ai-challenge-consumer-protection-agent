@@ -55,6 +55,9 @@ class DeadlineItem:
     urgency: Literal["expired", "urgent", "ok", "unknown"]
     law_citation: Citation | None
     urgency_note: str
+    # 민원 유형 2순위에서 온 카드. "해당될 수 있음"으로 구분해 보여준다 —
+    # 1순위 카드와 섞어 놓으면 화면이 확정된 사실처럼 말한다.
+    tentative: bool = False
 
 
 # 일수 검증 근거 (2026-07-23, data/corpus/laws.jsonl 원문 대조):
@@ -244,7 +247,7 @@ WITHDRAWAL_BY_PRODUCT: dict[str, DeadlineRule] = {
 
 def compute_deadlines(
     category: str, when_text: str, today: date | None = None,
-    situation_text: str | None = None,
+    situation_text: str | None = None, alt_category: str | None = None,
 ) -> list[DeadlineItem]:
     """법정 기한 카드. 청약철회는 **민원 유형이 아니라 상품유형**으로 고른다.
 
@@ -260,6 +263,24 @@ def compute_deadlines(
     """
     today = today or date.today()
     rules = RULES.get(category, []) + RULES["_common"]
+
+    # 민원 유형 2순위의 기한도 함께 노출한다.
+    #
+    # 분류 recall@1은 금감원 라벨 기준 57%대인데 recall@2는 72%대다. 즉 정답이
+    # 후보에는 있는데 1순위가 아닌 경우가 15%p쯤 된다. 1순위만 쓰면 그 15%p에서
+    # 카드가 사라지고, 카드가 사라지는 것은 **보수적 방향이 아니다** — 소비자가
+    # 법정 기한을 놓친다. 반대로 하나 더 붙는 것은 사용자가 가려 읽을 수 있다.
+    #
+    # 그래서 2순위 카드는 `tentative`로 표시해 함께 준다. 확정으로 보이게 섞지
+    # 않는 것이 조건이다.
+    tentative_actions: set[str] = set()
+    if alt_category and alt_category != category:
+        known = {r.action for r in rules}
+        for r in RULES.get(alt_category, []):
+            if r.action not in known:
+                rules = rules + [r]
+                known.add(r.action)
+                tentative_actions.add(r.action)
 
     if situation_text:
         from app.agent import product_type
@@ -300,9 +321,13 @@ def compute_deadlines(
             note += _BUSINESS_DAY_CAVEAT
         if urgency == "unknown" and rule.days is not None:
             note = "시기를 알려주시면 남은 기한을 계산해 드립니다. " + note
+        tentative = rule.action in tentative_actions
+        if tentative:
+            note = "이 유형에 해당될 경우의 기한입니다. " + note
         items.append(DeadlineItem(
             action=rule.action, period=rule.period, computed_deadline=deadline,
             urgency=urgency, law_citation=citation, urgency_note=note,
+            tentative=tentative,
         ))
     items.sort(key=lambda i: _URGENCY_ORDER[i.urgency])
     return items

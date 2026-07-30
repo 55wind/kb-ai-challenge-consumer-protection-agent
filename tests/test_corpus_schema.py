@@ -81,7 +81,12 @@ def test_real_interpretations_corpus_loads():
     """실제 코퍼스가 스키마를 통과하는지. 파싱 스크립트 회귀를 여기서 잡는다."""
     records = load_corpus("interpretations")
     assert len(records) > 100, "유권해석 코퍼스가 비었거나 파싱이 깨졌다"
-    assert {r.doc_type for r in records} == {"FAQ", "해설"}
+    # 허용 값을 여기에 또 적지 않는다 — 스키마가 하나뿐인 정의여야 한다.
+    # 예전에는 {"FAQ", "해설"}을 박아 두어, 스키마가 "안내"를 받도록 늘어난 뒤에도
+    # 테스트만 실패했다. 재야 할 것은 "코퍼스가 스키마를 벗어나지 않는가"다.
+    allowed = set(InterpretationDoc.model_fields["doc_type"].annotation.__args__)
+    assert {r.doc_type for r in records} <= allowed
+    assert {r.doc_type for r in records}, "doc_type이 비었다"
     assert all(r.title.strip() and r.text.strip() for r in records)
 
 

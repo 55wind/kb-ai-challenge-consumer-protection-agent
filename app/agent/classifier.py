@@ -59,6 +59,10 @@ class Classification:
     category: str
     is_dispute: bool
     confidence: Literal["high", "low"]
+    # 임베딩 후보 중 채택되지 않은 쪽. 기한 카드를 "해당될 수 있음"으로 함께
+    # 노출하는 데 쓴다 — recall@1과 recall@2의 차이(약 15%p)에서 카드가 사라지는
+    # 것을 막는다(deadlines.compute_deadlines 설명).
+    alt_category: str | None = None
 
 
 def _candidates(text: str, top: int = 2) -> list[str]:
@@ -112,7 +116,11 @@ def classify(text: str, llm: OllamaClient) -> Classification:
             category=category,
             is_dispute=bool(data.get("is_dispute", False)),
             confidence="high",
+            alt_category=next((c for c in cands if c != category), None),
         )
     except (json.JSONDecodeError, ValueError, TypeError):
         # sLLM 응답 불량 → 임베딩 1순위 후보로 폴백
-        return Classification(category=cands[0], is_dispute=False, confidence="low")
+        return Classification(
+            category=cands[0], is_dispute=False, confidence="low",
+            alt_category=cands[1] if len(cands) > 1 else None,
+        )

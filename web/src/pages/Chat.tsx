@@ -343,10 +343,13 @@ export default function Chat() {
                 <div key={i} className="deadlines">
                   <div className="deadlines-head"><IconAlarmClock size={16} /> 지금 해야 할 일</div>
                   {b.items.map((d, j) => (
-                    <div key={j} className={`deadline-item ${d.urgency}`}>
+                    <div key={j} className={`deadline-item ${d.urgency}${d.tentative ? " tentative" : ""}`}>
                       <span className={`tag urgency-${d.urgency}`}>{URGENCY_LABEL[d.urgency]}</span>
                       <div>
-                        <div className="deadline-action">{d.action}</div>
+                        <div className="deadline-action">
+                          {d.action}
+                          {d.tentative && <span className="tag neutral">해당될 수 있음</span>}
+                        </div>
                         <div className="deadline-period">
                           {d.period}
                           {d.computed_deadline && ` · 기한(말씀하신 시기 기준 추정): ${d.computed_deadline}`}
