@@ -76,6 +76,85 @@ def _candidates(text: str, top: int = 2) -> list[str]:
     return [names[i] for i in order]
 
 
+# ── 민원유형을 상품유형 경유로 정한다 ────────────────────────────────
+#
+# `CATEGORIES` 10종은 두 축이 섞여 있어 임베딩 하나로 가르기 어렵다 — 실측
+# recall@1 64.5%였다. 그런데 **상품유형(제3조 4종)은 이미 95.4%로 맞힌다**
+# (`product_type`). 그래서 10종을 직접 고르지 않고 상품유형에서 내려온다.
+#
+#     보장성 → 보험            예금성 → 예금·계좌
+#     대출성 → 대출·금리 (신용카드가 언급되면 카드 — 제2조1호 마목)
+#     투자성 → 불완전판매 (매매 국면이면 투자상품)
+#
+# 실측(금감원 사례집 394건 · 기관 라벨 100%):
+#
+#     임베딩만             top-1 64.5%   top-2 76.4%
+#     상품유형 경유          top-1 92.6%   top-2 95.7%   ← 채택
+#
+# **홀드아웃으로 붕괴 여부를 확인했다.** 사례집에는 `절차문의`·`기타`가 0건이라
+# 그 정답지로는 이 두 유형의 손해가 보이지 않는다 — 폐기된 「결정례 중심 벡터」가
+# 정확히 그 자리에서 무너졌다. 감독당국 편철 프로브 13건(부당권유 8 / 절차문의 5)에서
+# top-1 69.2% → 76.9%, top-2 92.3% 유지다.
+#
+# 그 유지를 만드는 것이 아래 두 장치다.
+#   ① `_NO_PRODUCT` — 상품 축이 없는 유형이 임베딩 1순위면 덮지 않는다
+#   ② 1순위만 갈아끼우고 **뒤 순위는 임베딩 순서를 그대로 잇는다**
+#
+# 투자성의 기본값을 `불완전판매`로 둔 것은 우리 판단이다 — 소비자 민원에서 임의매매
+# 분쟁보다 설명 못 들은 사건이 훨씬 흔하다. 조문이 정한 것이 아니다.
+_PRODUCT_TO_CATEGORY = {
+    "보장성 상품": "보험",
+    "예금성 상품": "예금·계좌",
+    "대출성 상품": "대출·금리",
+    "투자성 상품": "불완전판매",
+}
+# 상품 축이 없는 유형. 상품유형 경유로 덮으면 사라진다.
+_NO_PRODUCT = frozenset({"절차문의"})
+# 제2조제1호 마목이 신용카드를 따로 열거한다 — 대출성 안에서 `카드`로 가른다.
+_CARD_WORDS = ("신용카드", "체크카드", "카드", "할부")
+# 투자성 안에서 매매 국면 → `투자상품`. 그 밖은 `불완전판매`.
+_TRADE_WORDS = ("임의매매", "반대매매", "매매주문", "주문", "매도", "매수", "일임", "위탁")
+# 위반 자체가 낱말로 드러나는 자리 — 제20·21조, 통신사기피해환급법.
+# 상품유형보다 앞선다. 조문이 그 **행위**를 직접 금지하기 때문이다.
+_VIOLATION_WORDS: dict[str, tuple[str, ...]] = {
+    "부당권유·불공정영업": ("꺾기", "연대보증", "담보를 요구", "보증을 요구",
+                            "중도상환수수료", "불초청", "단정적 판단", "재권유"),
+    "보이스피싱·전자금융사기": ("보이스피싱", "스미싱", "명의도용", "지급정지",
+                                "사기이용계좌", "피해구제", "전자금융사기"),
+}
+
+
+def _from_product(text: str, product: str) -> str:
+    if product == "대출성 상품" and any(w in text for w in _CARD_WORDS):
+        return "카드"
+    if product == "투자성 상품" and any(w in text for w in _TRADE_WORDS):
+        return "투자상품"
+    return _PRODUCT_TO_CATEGORY[product]
+
+
+def rank_categories(text: str, top: int = 2) -> list[str]:
+    """민원유형 순위. 1순위는 상품유형이 정하고, 뒤 순위는 임베딩 순서를 잇는다."""
+    from app.agent import product_type
+
+    embedded = _candidates(text, top=max(top + 1, 3))
+    if embedded[0] in _NO_PRODUCT:
+        return embedded[:top]
+
+    lead: str | None = None
+    for category, words in _VIOLATION_WORDS.items():
+        if any(w in text for w in words):
+            lead = category
+            break
+    if lead is None:
+        try:
+            lead = _from_product(text, product_type.infer(text, top=1)[0])
+        except Exception as e:  # noqa: BLE001 - 분류가 통째로 죽어선 안 된다
+            print(f"[classifier] 상품유형 추정 실패 — 임베딩으로 대체합니다: "
+                  f"{type(e).__name__}: {e}", flush=True)
+            return embedded[:top]
+    return ([lead] + [x for x in embedded if x != lead])[:top]
+
+
 def classify(text: str, llm: OllamaClient) -> Classification:
     """민원 유형은 **임베딩이 정하고**, sLLM은 분쟁성만 판정한다.
 
@@ -108,7 +187,7 @@ def classify(text: str, llm: OllamaClient) -> Classification:
     호출이 실패하면 `is_dispute=False`, `confidence="low"`로 두되 **유형은 그대로
     나간다.** 예전에는 이 경로가 유형까지 폴백이었다.
     """
-    cands = _candidates(text)
+    cands = rank_categories(text, top=2)
     category = cands[0]
     alt = cands[1] if len(cands) > 1 else None
 
