@@ -39,8 +39,18 @@ ROOT = Path(__file__).resolve().parent.parent
 BAR = "─" * 62
 
 
-def _cases(limit: int) -> list[tuple[str, str]]:
-    """(민원 텍스트, 정답 유형). facts 앞부분을 민원 진술로 쓴다."""
+def _cases(limit: int, only_authoritative: bool = False) -> list[tuple[str, str, str]]:
+    """(민원 텍스트, 정답 유형, 라벨 출처). facts 앞부분을 민원 진술로 쓴다.
+
+    **라벨 출처를 함께 돌려준다.** `cases.jsonl`의 `category`는 두 곳에서 온다 —
+    금감원 「금융분쟁조정 사례집」의 章(18건)과 우리 키워드 규칙의 추정(94건)이다.
+    그런데 이 스크립트는 결과를 "금감원 라벨 결정례"라고 찍고 있었다. **84%가
+    우리 라벨인데 기관 라벨이라고 적은 것이다.**
+
+    이 프로젝트에서 같은 종류의 잘못이 네 번째다(결정례 라벨, 프로브 라벨,
+    기한 경로, 그리고 이것). 네 번 모두 숫자나 근거가 실제보다 좋아 보이는
+    방향이었다. 그래서 출처를 값으로 끌고 다니며 결과에 나눠 적는다.
+    """
     rows = [json.loads(x) for x in (ROOT / "data/corpus/cases.jsonl").open(encoding="utf-8")]
     out = []
     for r in rows:
@@ -48,7 +58,10 @@ def _cases(limit: int) -> list[tuple[str, str]]:
         cat = r.get("category")
         if len(facts) < 60 or not cat:
             continue
-        out.append((facts[:600], cat))
+        src = r.get("category_source") or "출처 미기재"
+        if only_authoritative and src != "금융감독원 사례집":
+            continue
+        out.append((facts[:600], cat, src))
     random.Random(20260728).shuffle(out)  # 유형 편중을 흩되 재현 가능하게
     return out[:limit]
 
@@ -77,18 +90,22 @@ def eval_classification(llm, limit: int) -> dict:
 
     data = _cases(limit)
     hit = fallback = 0
+    # 라벨 출처별로 따로 센다. 84%가 우리 키워드 추정이라 섞어 놓은 값은
+    # 기관 라벨 정확도가 아니다.
+    by_src: dict[str, list[int]] = collections.defaultdict(list)
     lat: list[float] = []
     confusion: collections.Counter = collections.Counter()
     # 오분류의 결과를 나눈다. 유형은 라우팅과 기한 룰을 고르므로, 같은 오분류라도
     # 기한 안내가 그대로면 사용자에게 보이는 피해가 없다.
     harmless = missing = extra = misrouted = 0
 
-    for text, gold in data:
+    for text, gold, src in data:
         t = time.perf_counter()
         c = classifier.classify(text, llm)
         lat.append(time.perf_counter() - t)
         if c.confidence == "low":
             fallback += 1
+        by_src[src].append(int(c.category == gold))
         if c.category == gold:
             hit += 1
             continue
@@ -115,6 +132,7 @@ def eval_classification(llm, limit: int) -> dict:
     return {
         "n": n,
         "정확도": hit / n,
+        "라벨출처별": {k: (sum(v), len(v)) for k, v in sorted(by_src.items())},
         "JSON 준수율": 1 - fallback / n,
         "지연_중앙값": statistics.median(lat),
         "오분류": confusion.most_common(4),
@@ -126,7 +144,7 @@ def eval_consistency(llm, rounds: int) -> dict:
     """같은 입력을 반복했을 때 같은 답이 나오는 비율."""
     from app.agent import classifier
 
-    probes = [t for t, _ in _cases(6)]
+    probes = [t for t, _, _ in _cases(6)]
     stable = 0
     for text in probes:
         answers = [classifier.classify(text, llm).category for _ in range(rounds)]
@@ -239,9 +257,12 @@ def main() -> int:
             print(f"  {name:<12}{sec:>8.2f}초")
         return 0
 
-    print(f"\n[1] 유형 분류 — 금감원 라벨 결정례 {a.cases}건")
+    print(f"\n[1] 유형 분류 — 결정례 {a.cases}건")
     c = eval_classification(llm, a.cases)
     print(f"  정확도        {c['정확도']:.1%}  ({int(c['정확도'] * c['n'])}/{c['n']})")
+    # 라벨을 누가 붙였는지로 갈라 적는다. 섞어 놓은 값은 기관 라벨 정확도가 아니다.
+    for src, (ok, tot) in c["라벨출처별"].items():
+        print(f"    · {src:<16} {ok:3d}/{tot:<3d} = {ok / tot:6.1%}")
     print(f"  JSON 준수율   {c['JSON 준수율']:.1%}  (미달 시 임베딩 폴백)")
     print(f"  지연 중앙값   {c['지연_중앙값']:.2f}초")
     if c["오분류"]:

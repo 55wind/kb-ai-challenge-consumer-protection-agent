@@ -31,36 +31,42 @@ def _stub_embeddings(monkeypatch):
     monkeypatch.setattr(classifier.embedder, "embed", fake_embed)
 
 
-def test_classify_uses_llm_choice():
-    llm = StubLLM('{"category": "보이스피싱·전자금융사기", "is_dispute": true}')
+def test_category_comes_from_embedding_not_the_llm():
+    """유형은 임베딩 1순위가 정한다. sLLM이 뒤집지 못한다.
+
+    금감원 사례집 라벨로 재니 sLLM 택일이 정확도를 반으로 깎았다(18건 기준
+    88.9% → 44.4%). 예전 "택일 정확도 89.7%"는 우리 키워드 규칙이 만든 정답지로
+    잰 값이었다. 이 경로가 되살아나면 그 손해가 그대로 돌아온다.
+    """
+    # 모델이 다른 유형을 우겨도 임베딩 1순위가 이겨야 한다
+    llm = StubLLM('{"is_dispute": true, "category": "카드"}')
     result = classify("보이스피싱을 당해서 돈이 빠져나갔어요", llm)
-    assert (result.category, result.is_dispute, result.confidence) == (
-        "보이스피싱·전자금융사기", True, "high")
+    assert result.category == "보이스피싱·전자금융사기"
+    assert result.is_dispute is True
+    assert result.confidence == "high"
     # 채택되지 않은 후보가 남아야 한다 — 기한 카드를 "해당될 수 있음"으로 함께
     # 노출하는 데 쓴다(deadlines.compute_deadlines 설명).
     assert result.alt_category and result.alt_category != result.category
 
 
-def test_classify_falls_back_on_bad_json():
+def test_classification_is_deterministic_for_the_same_input():
+    """같은 민원에는 같은 유형. sLLM을 빼서 얻은 성질이라 고정한다."""
+    llm = StubLLM('{"is_dispute": false}')
+    got = {classify("펀드 설명을 못 들었어요", llm).category for _ in range(5)}
+    assert len(got) == 1, got
+
+
+def test_category_survives_llm_failure():
+    """sLLM이 죽어도 유형은 나간다. 예전에는 이 경로가 유형까지 폴백이었다."""
     llm = StubLLM("죄송합니다, JSON이 아닙니다")
     result = classify("펀드 설명을 못 들었어요", llm)
-    assert result.confidence == "low"
     assert result.category in CATEGORIES
-
-
-def test_classify_falls_back_on_unknown_category():
-    llm = StubLLM('{"category": "우주여행", "is_dispute": false}')
-    result = classify("펀드 설명을 못 들었어요", llm)
     assert result.confidence == "low"
+    assert result.is_dispute is False
 
 
-def test_prompt_includes_candidate_descriptions(monkeypatch):
-    """후보를 이름만 주지 말고 설명과 함께 준다.
-
-    '불완전판매'가 설명의무 위반을 가리킨다는 것은 이 분류 체계의 약속이지
-    낱말에서 자명하게 나오는 뜻이 아니다. 이름만 주면 모델이 추측해야 한다.
-    결정례 60건 실측에서 설명을 붙이자 80.0% → 83.3%였다.
-    """
+def test_llm_is_only_asked_about_dispute():
+    """프롬프트가 유형 선택을 묻지 않는다 — 물으면 그 답을 쓰고 싶어진다."""
     from app.agent import classifier as clf
 
     seen = {}
@@ -68,9 +74,10 @@ def test_prompt_includes_candidate_descriptions(monkeypatch):
     class Spy:
         def generate(self, system, prompt, **kw):
             seen["prompt"] = prompt
-            return '{"category": "보험", "is_dispute": false}'
+            seen["schema"] = kw.get("schema")
+            return '{"is_dispute": false}'
 
-    monkeypatch.setattr(clf, "_candidates", lambda t, top=2: ["보험", "카드"])
-    clf.classify("보험금을 안 준대요", Spy())
-    assert clf.CATEGORIES["보험"] in seen["prompt"], "후보 설명이 프롬프트에 없다"
-    assert clf.CATEGORIES["카드"] in seen["prompt"], "두 번째 후보 설명이 빠졌다"
+    monkeypatch_free = clf.classify("보험금을 안 준대요", Spy())
+    assert monkeypatch_free.category in CATEGORIES
+    assert "분쟁성" in seen["prompt"]
+    assert set(seen["schema"]["properties"]) == {"is_dispute"}, seen["schema"]

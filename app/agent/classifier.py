@@ -5,7 +5,7 @@ from typing import Literal
 
 import numpy as np
 
-from app.llm.ollama_client import OllamaClient
+from app.llm.ollama_client import LLMUnavailable, OllamaClient
 from app.search import embedder
 
 # 유형 설명은 **금소법 조문의 열거를 그대로 옮긴 것**을 기본으로 한다.
@@ -77,50 +77,59 @@ def _candidates(text: str, top: int = 2) -> list[str]:
 
 
 def classify(text: str, llm: OllamaClient) -> Classification:
+    """민원 유형은 **임베딩이 정하고**, sLLM은 분쟁성만 판정한다.
+
+    ## 왜 sLLM에게 유형을 고르게 하지 않는가
+
+    예전에는 임베딩이 후보 2개를 추리고 sLLM이 그중 하나를 골랐다. 그 구조는
+    EXAONE 3.5 시절 "택일 정확도 89.7%"라는 측정 위에 서 있었는데, **그 측정의
+    정답지가 우리 키워드 규칙이 만든 것이었다.** 금융감독원 사례집 라벨로 다시 재니
+    결론이 뒤집혔다(결정례 112건, 그중 기관 라벨 18건).
+
+        구분                     전체 112건   기관 라벨 18건
+        임베딩 1순위 (LLM 미호출)    71.4%        88.9%
+        임베딩 2 → sLLM 택일         58.0%        44.4%
+        임베딩 top-2 포함률(천장)     86.6%          —
+
+    **기관 라벨에서 sLLM이 정확도를 반으로 깎는다.** 1.2B 모델에게 두 유형의 경계를
+    가르는 것은 비싼 요구였고, 임베딩이 이미 1순위로 맞혀 놓은 것을 2순위로
+    갈아치우는 쪽이 더 많았다.
+
+    그래서 유형은 임베딩 1순위를 그대로 쓴다. 부수 효과가 둘 있다 —
+    유형 판정이 **결정론적**이 되고(같은 민원에 매번 같은 유형), 실패할 여지가
+    없어진다(JSON이 깨져도 유형은 나온다).
+
+    ## sLLM에게 남긴 것
+
+    `is_dispute`(분쟁성)만 묻는다. 이진 판단이라 택일과 성격이 다르고, 유형과 달리
+    **임베딩으로 대신할 방법이 없다.** 다만 이 값의 정확도는 정답지가 없어 재지
+    못했다 — 화면 표시에만 쓰고 흐름을 가르지 않는 이유다.
+
+    호출이 실패하면 `is_dispute=False`, `confidence="low"`로 두되 **유형은 그대로
+    나간다.** 예전에는 이 경로가 유형까지 폴백이었다.
+    """
     cands = _candidates(text)
+    category = cands[0]
+    alt = cands[1] if len(cands) > 1 else None
+
     system = (
         "너는 금융 민원 분류기다. 반드시 JSON으로만 답한다. "
-        '형식: {"category": "<후보 중 하나>", "is_dispute": true|false}. '
+        '형식: {"is_dispute": true|false}. '
         "is_dispute는 금융회사와의 다툼·피해구제 요구(분쟁성)이면 true, 단순 정보 문의면 false."
     )
-    # 후보를 이름만 주지 않고 **설명과 함께** 준다.
-    #
-    # 이름만 주면(`['불완전판매', '보험']`) 모델이 그 이름의 뜻을 스스로 추측해야
-    # 한다. 예컨대 '불완전판매'가 설명의무 위반을 가리킨다는 것은 이 분류 체계의
-    # 약속이지 낱말에서 자명하게 나오는 뜻이 아니다. 설명은 CATEGORIES에 이미
-    # 있으니 안 줄 이유가 없다.
-    #
-    # 결정례 60건 실측: 80.0% → 83.3% (`scripts/experiment_classifier.py`).
-    # 후보를 고르는 단계는 건드리지 않으므로 회수율에는 영향이 없다.
-    listed = "\n".join(f"- {c}: {CATEGORIES[c]}" for c in cands)
-    prompt = f"민원 내용: {text}\n\n후보 유형:\n{listed}\n\n어느 유형인가?"
-    # enum까지 스키마로 못박는다 — 후보 밖의 유형을 애초에 생성할 수 없게 된다.
-    # 프롬프트로 "후보 중 하나"라고 부탁하는 것과 달리 디코딩이 제약되므로,
-    # 지시를 잘 못 따르는 작은 모델에서도 아래 `category not in CATEGORIES`가
-    # 발동하지 않는다.
+    prompt = f"민원 내용: {text}\n\n이것은 분쟁성 민원인가?"
     schema = {
         "type": "object",
-        "properties": {
-            "category": {"type": "string", "enum": cands},
-            "is_dispute": {"type": "boolean"},
-        },
-        "required": ["category", "is_dispute"],
+        "properties": {"is_dispute": {"type": "boolean"}},
+        "required": ["is_dispute"],
     }
-    raw = llm.generate(system, prompt, timeout=60, schema=schema)
     try:
-        data = json.loads(raw)
-        category = data.get("category", "")
-        if category not in CATEGORIES:
-            raise ValueError(category)
+        data = json.loads(llm.generate(system, prompt, timeout=60, schema=schema))
         return Classification(
-            category=category,
-            is_dispute=bool(data.get("is_dispute", False)),
-            confidence="high",
-            alt_category=next((c for c in cands if c != category), None),
+            category=category, is_dispute=bool(data.get("is_dispute", False)),
+            confidence="high", alt_category=alt,
         )
-    except (json.JSONDecodeError, ValueError, TypeError):
-        # sLLM 응답 불량 → 임베딩 1순위 후보로 폴백
+    except (json.JSONDecodeError, ValueError, TypeError, LLMUnavailable):
         return Classification(
-            category=cands[0], is_dispute=False, confidence="low",
-            alt_category=cands[1] if len(cands) > 1 else None,
+            category=category, is_dispute=False, confidence="low", alt_category=alt,
         )
