@@ -118,3 +118,43 @@ def test_calendar_day_rules_unchanged(monkeypatch):
     loan = next(i for i in items if "청약철회" in i.action)
     assert loan.computed_deadline == "2026-07-29"
     assert "주말 제외" not in loan.urgency_note
+
+
+def test_illegal_contract_termination_is_offered_for_every_category():
+    """위법계약해지는 유형과 무관하게 항상 안내해야 한다.
+
+    금소법 제47조①이 적용 대상 위반을 열거한다 — 제17조③(적합성), 제18조②(적정성),
+    제19조①③(설명의무), 제20조①(불공정영업), 제21조(부당권유). 이 위반들은
+    보장성·투자성·예금성·대출성 **어느 상품에서도** 일어난다. 조문이 상품 유형을
+    가리지 않으므로 이 권리도 유형에 묶여선 안 된다.
+
+    예전에는 `불완전판매`와 `부당권유·불공정영업`에만 달려 있어서, 같은 설명의무
+    위반이라도 분류가 `보험`이나 `대출·금리`로 가면 카드가 사라졌다. 분류 정확도가
+    완전할 수 없으므로(금감원 라벨 기준 60%대) 이 결합이 곧 권리 누락이었다.
+    """
+    from app.agent.classifier import CATEGORIES
+    from app.agent.deadlines import RULES
+
+    for category in CATEGORIES:
+        actions = [r.action for r in RULES.get(category, []) + RULES["_common"]]
+        assert any("위법계약 해지" in a for a in actions), (
+            f"'{category}'에 위법계약해지 안내가 없다 — 분류가 이 유형으로 틀리면 "
+            f"제47조상 권리가 화면에서 사라진다"
+        )
+
+
+def test_withdrawal_period_matches_the_statute_per_product_type():
+    """청약철회는 상품 유형별 기간이 제46조①과 맞아야 한다.
+
+    제46조①은 유형마다 기간을 달리 정한다 — 1호 보장성 15일, 2호 투자성 7일,
+    3호 대출성 14일. 이쪽은 조문이 유형을 구분하므로 유형에 묶는 것이 맞다.
+    """
+    from app.agent.deadlines import RULES
+
+    expected = {"보험": ("보장성", 15), "불완전판매": ("투자성", 7),
+                "투자상품": ("투자성", 7), "대출·금리": ("대출성", 14)}
+    for category, (kind, days) in expected.items():
+        hits = [r for r in RULES[category] if "청약철회" in r.action]
+        assert hits, f"'{category}'에 청약철회 카드가 없다"
+        rule = next(r for r in hits if kind in r.action)
+        assert rule.days == days, f"{kind} 청약철회가 {rule.days}일 — 제46조는 {days}일"
