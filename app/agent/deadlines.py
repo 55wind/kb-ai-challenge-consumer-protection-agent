@@ -317,15 +317,20 @@ def compute_deadlines(
             # 청약철회는 상품유형이 정한다. 유형 기반으로 붙어 있던 것은 걷어낸다.
             rules = [r for r in rules if "청약철회" not in r.action]
             seen = {r.action for r in rules}
-            for k in kinds:
+            for rank, k in enumerate(kinds):
                 rule = WITHDRAWAL_BY_PRODUCT.get(k)
                 if rule and rule.action not in seen:
                     rules.append(rule)
                     seen.add(rule.action)
-                    # 상품유형이 확정한 카드다. 2순위 유형에도 같은 카드가 있었다는
-                    # 이유로 「해당될 수 있음」을 달면, 조문이 정한 기간을 추측처럼
-                    # 보여주게 된다 — 근거의 무게가 다르다.
-                    tentative_actions.discard(rule.action)
+                    if rank == 0:
+                        # 상품유형 1순위가 정한 카드다(실측 95.4%). 2순위 민원유형에도
+                        # 같은 카드가 있었다는 이유로 「해당될 수 있음」을 달면, 조문이
+                        # 정한 기간을 추측처럼 보여주게 된다 — 근거의 무게가 다르다.
+                        tentative_actions.discard(rule.action)
+                    else:
+                        # 상품유형 2순위. 카드를 없애지는 않지만(없애면 4.6%에서
+                        # 놓친다) 확정으로 보이게 하지도 않는다.
+                        tentative_actions.add(rule.action)
     event = parse_event_date(when_text or "", today)
     items: list[DeadlineItem] = []
     for rule in rules:

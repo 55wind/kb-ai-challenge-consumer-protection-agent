@@ -315,3 +315,26 @@ def test_iso_date_actually_produces_a_computed_deadline():
     card = next(i for i in items if "청약철회" in i.action)
     assert card.computed_deadline, "날짜를 줬는데 기한이 계산되지 않았다"
     assert card.urgency in ("urgent", "ok", "expired"), card.urgency
+
+
+def test_second_product_type_card_is_tentative(monkeypatch):
+    """상품유형 2순위 카드는 「해당될 수 있음」으로 구분된다.
+
+    `product_type.infer`는 상위 2개를 돌려주고 둘의 청약철회를 함께 띄운다.
+    top-1이 95.4%가 된 뒤로는 둘을 같은 무게로 보이는 것이 과장이다 — 1순위는
+    조문이 정한 기간이고 2순위는 "해당될 수 있는" 것이다.
+
+    카드를 지우지는 않는다. 지우면 top-1이 틀리는 4.6%에서 법정 기한이 사라진다.
+    """
+    from app.agent import deadlines as dl
+    from app.agent import product_type
+
+    monkeypatch.setattr(product_type, "infer",
+                        lambda t, top=2: ["투자성 상품", "보장성 상품"])
+    items = dl.compute_deadlines("불완전판매", "2026년 7월 20일", today=TODAY,
+                                 situation_text="펀드를 샀는데 설명을 못 들었어요")
+    first = next(i for i in items if "투자성 상품 청약철회" in i.action)
+    second = next(i for i in items if "보장성 상품 청약철회" in i.action)
+    assert not first.tentative, "1순위 상품유형 카드가 추측으로 표시됐다"
+    assert second.tentative, "2순위 상품유형 카드가 확정으로 표시됐다"
+    assert "해당될 경우" in second.urgency_note
