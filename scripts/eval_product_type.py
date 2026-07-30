@@ -84,7 +84,7 @@ def main() -> int:
         literary = [(r["query"], CASE_LABEL_TO_PRODUCT[r["category"]])
                     for r in (json.loads(x) for x in cg.open(encoding="utf-8"))
                     if r["category"] in CASE_LABEL_TO_PRODUCT]
-        score(literary, "② 사례집 사례 제목 (문어체 · 공백 없음)")
+        score(literary, "② 사례집 사례 제목 (문어체 · 본문에서 공백 복원)")
 
     print("─" * 62)
     print("두 정답지의 문체가 다르다. ①이 실사용에 가깝고 ②는 표본이 크다.")

@@ -189,3 +189,59 @@ def test_product_goldset_labels_come_from_the_statute():
         assert any("제" in b and "조" in b for b in r["label_basis"]), r["label_basis"]
         assert len(r["label_basis"]) == 1, (
             f"낱말이 둘 이상 걸린 문항은 제3조 단서(중복 귀속)라 버려야 한다: {r['query'][:40]}")
+
+
+def test_product_type_accuracy_stays_above_the_bar():
+    """상품유형 판정이 기준 아래로 내려가면 실패한다.
+
+    이 판정이 청약철회 기간을 고른다(제46조①). 금감원 사례집 라벨 394건에서
+    top-1 95.4% · top-2 98.7%이고, 낱말을 고르는 데 쓰지 않은 구어체 31문항에서도
+    top-1 100%다.
+
+    기준을 top-1 0.92, top-2 0.96으로 둔다 — 실측보다 낮게 잡아 정상 변동에는
+    울지 않되, 낱말 계층이나 공백 복원이 조용히 끊기면(둘 다 눈에 안 띈다)
+    잡히게 한다.
+    """
+    import json
+
+    from app.agent import product_type
+    from app.config import settings
+
+    path = settings.DATA_DIR / "classifier_goldset.jsonl"
+    if not path.exists():
+        import pytest as _pytest
+        _pytest.skip("scripts/build_classifier_goldset.py 미실행")
+    mapping = {"보험": "보장성 상품", "예금·계좌": "예금성 상품", "대출·금리": "대출성 상품",
+               "카드": "대출성 상품", "투자상품": "투자성 상품", "불완전판매": "투자성 상품"}
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    rows = [(r["query"], mapping[r["category"]]) for r in rows if r["category"] in mapping]
+    assert len(rows) >= 300, f"정답지가 {len(rows)}건뿐이다"
+    t1 = t2 = 0
+    for q, truth in rows:
+        pred = product_type.infer(q, top=2)
+        t1 += pred[0] == truth
+        t2 += truth in pred
+    n = len(rows)
+    assert t1 / n >= 0.92, f"top-1 {t1 / n:.1%} — 낱말 계층이나 공백 복원이 끊겼는지 보라"
+    assert t2 / n >= 0.96, f"top-2 {t2 / n:.1%}"
+
+
+def test_case_titles_keep_their_spacing():
+    """사례 제목에 공백이 살아 있어야 한다.
+
+    목차 추출은 공백을 잃는다(`만성위염치료사실미고지…`). 본문 표제에서 되찾는
+    경로가 끊기면 정답지 질의가 다시 붙어 버리고, 임베딩·낱말 매칭이 함께 나빠진다.
+    조용히 끊기는 종류의 고장이라 비율로 고정한다.
+    """
+    import json
+
+    from app.config import settings
+
+    path = settings.DATA_DIR / "fss_case_index.jsonl"
+    if not path.exists():
+        import pytest as _pytest
+        _pytest.skip("scripts/build_fss_case_index.py 미실행")
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    spaced = sum(" " in r["title"] for r in rows)
+    assert spaced / len(rows) >= 0.85, (
+        f"공백이 있는 제목이 {spaced}/{len(rows)}건뿐이다 — 본문 표제 복원이 끊겼다")
