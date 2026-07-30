@@ -162,3 +162,30 @@ def test_index_ids_match_corpus():
             f"{kind}: 색인에만 {sorted(indexed - corpus)[:3]} · "
             f"코퍼스에만 {sorted(corpus - indexed)[:3]}"
         )
+
+
+def test_product_goldset_labels_come_from_the_statute():
+    """상품유형 정답지의 라벨은 **조문 적용**이어야 한다.
+
+    이 프로젝트는 자체 라벨로 자체 판정을 채점하다 두 번 뒤집혔다(분류 정답지,
+    프로브). 상품유형 정답지에서 같은 일이 나지 않게, 레코드마다 어느 조문으로
+    정했는지가 남아 있는지 검사한다.
+    """
+    import json
+
+    from app.config import settings
+
+    path = settings.DATA_DIR / "product_goldset.jsonl"
+    if not path.exists():
+        import pytest as _pytest
+        _pytest.skip("scripts/build_product_goldset.py 미실행")
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    assert len(rows) >= 25, f"{len(rows)}문항뿐이다 — 후보 수집이 깨졌다"
+    assert {r["product_type"] for r in rows} <= {
+        "예금성 상품", "대출성 상품", "투자성 상품", "보장성 상품"}, "제3조 4종을 벗어났다"
+    for r in rows:
+        assert r["label_basis"], f"라벨 근거가 없다: {r['query'][:40]}"
+        # 근거 문자열에 조문 번호가 있어야 한다 — "우리가 보기에"가 아니라 조문이다
+        assert any("제" in b and "조" in b for b in r["label_basis"]), r["label_basis"]
+        assert len(r["label_basis"]) == 1, (
+            f"낱말이 둘 이상 걸린 문항은 제3조 단서(중복 귀속)라 버려야 한다: {r['query'][:40]}")
