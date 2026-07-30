@@ -20,7 +20,7 @@ class ScriptedLLM:
 
     model = "scripted"
 
-    def generate(self, system, prompt, json_mode=False, timeout=120):
+    def generate(self, system, prompt, json_mode=False, timeout=120, schema=None):
         if "분류기" in system:
             return json.dumps({"category": "불완전판매", "is_dispute": False}, ensure_ascii=False)
         if "사실관계 정리" in system:
@@ -146,7 +146,7 @@ def test_transcript_to_draft_e2e(client):
 
 def test_phishing_dispute_emits_urgent_deadline(client):
     class PhishingLLM(ScriptedLLM):
-        def generate(self, system, prompt, json_mode=False, timeout=120):
+        def generate(self, system, prompt, json_mode=False, timeout=120, schema=None):
             if "분류기" in system:
                 return json.dumps({"category": "보이스피싱·전자금융사기", "is_dispute": True},
                                   ensure_ascii=False)

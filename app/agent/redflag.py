@@ -151,7 +151,14 @@ def _judge(clause: str, rule_name: str, law_text: str, llm: OllamaClient) -> tup
         f"검토 대상 문구: {clause}\n\n의심 유형: {rule_name}\n\n"
         f"관련 규정:\n{law_text[:800]}\n\n판정:"
     )
-    raw = llm.generate(system, prompt, json_mode=True, timeout=90)
+    raw = llm.generate(system, prompt, timeout=90, schema={
+        "type": "object",
+        "properties": {
+            "level": {"type": "string", "enum": ["red", "yellow"]},
+            "reason": {"type": "string"},
+        },
+        "required": ["level", "reason"],
+    })
     try:
         data = json.loads(raw)
         level = data.get("level", "yellow")

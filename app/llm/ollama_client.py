@@ -38,7 +38,20 @@ class OllamaClient:
         self._client = httpx.Client(base_url=self.base_url, transport=transport, timeout=None)
 
     def generate(self, system: str, prompt: str, json_mode: bool = False,
-                 timeout: float = 120) -> str:
+                 timeout: float = 120, schema: dict | None = None) -> str:
+        """schema를 주면 Ollama가 그 JSON Schema로 **디코딩을 제약**한다.
+
+        `format: "json"`은 "문법이 맞는 JSON"만 보장한다. 스키마는 보장하지 않아
+        모델이 키 이름을 제 마음대로 정할 수 있다. 실제로 EXAONE 4.0 1.2B는
+        `{"category": ..., "is_dispute": ...}`를 요구했더니 `{"type": "response",
+        "text": "..."}`를 냈다 — 문법은 멀쩡하지만 앱 입장에서는 파싱 실패다.
+
+        스키마를 넘기면 Ollama가 문법을 제약해 그 키·타입·enum만 나올 수 있게
+        만든다. 같은 질의에서 준수 실패가 사라지고, 군말을 생성할 수 없으므로
+        오히려 빨라진다(3.4초 → 0.7초 실측).
+
+        json_mode는 스키마를 모르는 호출(자유형 JSON)을 위해 남긴다.
+        """
         payload = {
             "model": self.model,
             "system": system,
@@ -46,7 +59,9 @@ class OllamaClient:
             "stream": False,
             "options": _options(),
         }
-        if json_mode:
+        if schema is not None:
+            payload["format"] = schema
+        elif json_mode:
             payload["format"] = "json"
         try:
             resp = self._client.post("/api/generate", json=payload, timeout=timeout)

@@ -212,7 +212,9 @@ def main() -> int:
     llm = OllamaClient()
 
     device = "CPU 전용" if settings.OLLAMA_NUM_GPU == 0 else "기본(하드웨어 자동)"
-    print(f"EXAONE 3.5 2.4B 품질·속도 측정  (모델: {llm.model} · {device})")
+    # 제목에 모델명을 박아 두면 모델을 바꾼 뒤에도 옛 이름이 찍혀, 측정 결과를
+    # 문서로 옮길 때 어느 모델의 값인지 뒤바뀐다. 실제 모델명만 쓴다.
+    print(f"품질·속도 측정  (모델: {llm.model} · {device})")
     print(BAR)
 
     if a.speed_only:

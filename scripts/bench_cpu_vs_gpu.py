@@ -13,11 +13,14 @@ import sys
 
 import httpx
 
+from app.config import settings
+
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 BASE = "http://127.0.0.1:11434"
-MODEL = "exaone3.5:2.4b"
+# 리터럴로 박으면 모델을 교체한 뒤에도 옛 모델을 재고 그 수치를 문서에 적게 된다
+MODEL = settings.GEN_MODEL
 PROMPT = ("다음 조문을 근거로 답하세요.\n"
           "[1] 예금자보호법 제32조 — 예금보험공사는 예금자에게 5천만원 한도로 보험금을 지급한다.\n\n"
           "질문: 예금자보호 한도는 얼마인가요?")

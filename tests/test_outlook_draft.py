@@ -12,7 +12,7 @@ class StubLLM:
     def __init__(self, responses: list[str]):
         self.responses = list(responses)
 
-    def generate(self, system, prompt, json_mode=False, timeout=120):
+    def generate(self, system, prompt, json_mode=False, timeout=120, schema=None):
         return self.responses.pop(0) if self.responses else ""
 
 

@@ -38,7 +38,7 @@ class StreamLLM:
         for ch in text:
             yield ch
 
-    def generate(self, system, prompt, json_mode=False, timeout=120):
+    def generate(self, system, prompt, json_mode=False, timeout=120, schema=None):
         self.calls += 1
         return self.rounds[min(self.calls - 1, len(self.rounds) - 1)]
 
@@ -95,7 +95,7 @@ def test_falls_back_when_llm_cannot_stream(monkeypatch):
     class NoStream:
         model = "stub"
 
-        def generate(self, system, prompt, json_mode=False, timeout=120):
+        def generate(self, system, prompt, json_mode=False, timeout=120, schema=None):
             return "스트리밍 없이도 답합니다[1]"
 
     events = list(answerer.answer_events("질문", _hits(), NoStream()))

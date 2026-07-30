@@ -107,16 +107,41 @@ SYSTEM_PROMPT = (
     "2. 근거를 사용한 각 주장 뒤에 해당 문서 번호를 [1] 형태로 표기한다.\n"
     "3. 근거가 부족하면 '근거 부족'이라고 명시한다.\n"
     "4. 쉬운 한국어로, 소비자의 눈높이에서 설명한다.\n"
-    "5. 법률 자문이 아닌 정보 제공임을 전제로 한다."
+    "5. 법률 자문이 아닌 정보 제공임을 전제로 한다.\n"
+    "\n"
+    # 규칙 문장만으로는 작은 모델이 [n]을 붙이지 않는다. 예시 하나를 보여주면
+    # 형식을 따라 쓴다 — 실측에서 75.0% → 87.5%였다(예시를 둘로 늘려도 87.5%로
+    # 같아 하나만 둔다).
+    "형식 예시 —\n"
+    "근거 문서:\n"
+    "[1] 예금자보호법 제32조 (출처: 국가법령정보센터)\n"
+    "예금보험공사는 예금자에게 5천만원 한도로 보험금을 지급한다.\n"
+    "소비자 질문: 예금자보호 한도가 얼마인가요?\n"
+    "답변: 예금보험공사가 보호하는 한도는 1인당 5천만원입니다 [1]. "
+    "한도를 넘는 금액은 보호 대상이 아닙니다 [1]."
+)
+
+# 생성 직전에 다시 지시한다.
+#
+# 이 한 줄이 인용 준수율을 가장 크게 움직였다 — EXAONE 4.0 1.2B에서 시스템
+# 프롬프트만으로는 1차 준수율이 10.0%였는데, 같은 지시를 프롬프트 **말미**에
+# 놓으니 75.0%가 됐다. 시스템 프롬프트를 아무리 고쳐도(인용을 1번 규칙으로
+# 올리고 금지문을 넣어도) 6.2%에서 움직이지 않았으므로, 효과는 문장 내용이
+# 아니라 **위치**에서 온다. 작은 모델은 먼 지시보다 직전 토큰에 반응한다.
+#
+# 길이 요구를 함께 넣는다. 지시만 넣으면 답변이 194자로 짧아져 상담문으로
+# 쓰기 어려웠다(490자로 회복).
+_CITE_REMINDER = (
+    "(각 문장 끝에 [n]을 붙여 답하세요. 근거 내용을 인용해 다섯 문장 이상으로 자세히 설명하세요)"
 )
 
 
-def _build_prompt(query: str, hits: list[Hit]) -> str:
+def _build_prompt(query: str, hits: list[Hit], reminder: str = _CITE_REMINDER) -> str:
     docs = "\n\n".join(
         f"[{i + 1}] {_doc_title(h.record)} (출처: {h.record.source})\n{_doc_text(h.record)[:1200]}"
         for i, h in enumerate(hits)
     )
-    return f"근거 문서:\n{docs}\n\n소비자 질문: {query}\n\n답변:"
+    return f"근거 문서:\n{docs}\n\n소비자 질문: {query}\n\n{reminder}\n답변:"
 
 
 def _validate(text: str, hits: list[Hit]) -> Answer:
@@ -143,12 +168,14 @@ def _validate(text: str, hits: list[Hit]) -> Answer:
     return Answer(text=text, citations=citations, glossary=find_glossary_terms(text))
 
 
-def answer(query: str, hits: list[Hit], llm: OllamaClient) -> Answer:
-    text = llm.generate(SYSTEM_PROMPT, _build_prompt(query, hits), timeout=180).strip()
+def answer(query: str, hits: list[Hit], llm: OllamaClient,
+           reminder: str = _CITE_REMINDER) -> Answer:
+    text = llm.generate(SYSTEM_PROMPT, _build_prompt(query, hits, reminder), timeout=180).strip()
     return _validate(text, hits)
 
 
-def answer_streaming(query: str, hits: list[Hit], llm: OllamaClient):
+def answer_streaming(query: str, hits: list[Hit], llm: OllamaClient,
+                     reminder: str = _CITE_REMINDER):
     """토큰을 흘리며 생성하고, 끝나면 검증한다.
 
     CPU 추론은 답변 하나에 수십 초가 걸린다. 완성될 때까지 화면이 비어 있으면
@@ -157,7 +184,7 @@ def answer_streaming(query: str, hits: list[Hit], llm: OllamaClient):
 
     yield: ("delta", 토큰) 여러 번 → 마지막에 ("answer", Answer)
     """
-    prompt = _build_prompt(query, hits)
+    prompt = _build_prompt(query, hits, reminder)
     stream = getattr(llm, "stream", None)
     if stream is None:
         # 스트리밍을 지원하지 않는 LLM(테스트 스텁·대체 백엔드)이면 한 번에 받는다.
@@ -171,7 +198,15 @@ def answer_streaming(query: str, hits: list[Hit], llm: OllamaClient):
     yield ("answer", _validate("".join(buf).strip(), hits))
 
 
-_RETRY_HINT = "\n(반드시 근거 번호 [n]을 표기해 다시 답하세요)"
+# 재시도는 질의를 건드리지 않고 **말미 지시를 격상**한다.
+#
+# 예전에는 질의 뒤에 문구를 붙였다(`query + _RETRY_HINT`). 우연히 위치는 맞았지만
+# 질의문을 오염시켜, 검색은 원문으로 하고 생성은 변형된 질문으로 하는 상태가 됐다.
+# 지시와 질의를 갈라 두면 재시도가 무엇을 바꾸는지 한눈에 보인다.
+_RETRY_REMINDER = (
+    "(직전 답변에 근거 번호가 없었습니다. 이번에는 각 문장 끝에 반드시 [1] [2] 같은 "
+    "근거 번호를 붙이세요. 번호가 없는 문장은 쓰지 마세요. 다섯 문장 이상으로 답하세요)"
+)
 
 
 def answer_events(query: str, hits: list[Hit], llm: OllamaClient):
@@ -190,7 +225,7 @@ def answer_events(query: str, hits: list[Hit], llm: OllamaClient):
     except UngroundedAnswer:
         # 첫 시도의 잠정 표시를 버리게 알리고, 인용을 요구해 다시 생성한다
         yield ("discard", None)
-        yield from answer_streaming(query + _RETRY_HINT, hits, llm)
+        yield from answer_streaming(query, hits, llm, reminder=_RETRY_REMINDER)
 
 
 def answer_with_retry(query: str, hits: list[Hit], llm: OllamaClient) -> Answer:
@@ -198,4 +233,4 @@ def answer_with_retry(query: str, hits: list[Hit], llm: OllamaClient) -> Answer:
     try:
         return answer(query, hits, llm)
     except UngroundedAnswer:
-        return answer(query + "\n(반드시 근거 번호 [n]을 표기해 다시 답하세요)", hits, llm)
+        return answer(query, hits, llm, reminder=_RETRY_REMINDER)

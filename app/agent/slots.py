@@ -48,7 +48,13 @@ def extract_slots(dialog: list[dict], llm: OllamaClient) -> Slots:
         + "\n".join(f'- {k}: {v}' for k, v in _SLOT_DESC.items())
         + '\n형식: {"who": "...", "when": "...", "product": "...", "incident": "...", "demand": "..."}'
     )
-    raw = llm.generate(system, f"대화:\n{convo}", json_mode=True, timeout=90)
+    # 슬롯은 "알 수 없으면 빈 문자열"이 규칙이라 required로 전부 못박는다 —
+    # 키가 빠지는 것과 빈 값인 것을 구별할 필요가 없고, 빠지면 추측 여부를 알 수 없다.
+    raw = llm.generate(system, f"대화:\n{convo}", timeout=90, schema={
+        "type": "object",
+        "properties": {k: {"type": "string"} for k in SLOT_SCHEMA},
+        "required": list(SLOT_SCHEMA),
+    })
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:

@@ -90,7 +90,19 @@ def classify(text: str, llm: OllamaClient) -> Classification:
     # 후보를 고르는 단계는 건드리지 않으므로 회수율에는 영향이 없다.
     listed = "\n".join(f"- {c}: {CATEGORIES[c]}" for c in cands)
     prompt = f"민원 내용: {text}\n\n후보 유형:\n{listed}\n\n어느 유형인가?"
-    raw = llm.generate(system, prompt, json_mode=True, timeout=60)
+    # enum까지 스키마로 못박는다 — 후보 밖의 유형을 애초에 생성할 수 없게 된다.
+    # 프롬프트로 "후보 중 하나"라고 부탁하는 것과 달리 디코딩이 제약되므로,
+    # 지시를 잘 못 따르는 작은 모델에서도 아래 `category not in CATEGORIES`가
+    # 발동하지 않는다.
+    schema = {
+        "type": "object",
+        "properties": {
+            "category": {"type": "string", "enum": cands},
+            "is_dispute": {"type": "boolean"},
+        },
+        "required": ["category", "is_dispute"],
+    }
+    raw = llm.generate(system, prompt, timeout=60, schema=schema)
     try:
         data = json.loads(raw)
         category = data.get("category", "")

@@ -11,7 +11,9 @@ services:
     image: ollama/ollama:latest
     volumes:
       - ollama-models:/root/.ollama
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull exaone3.5:2.4b"]
+    # 받는 모델은 app의 GEN_MODEL 기본값과 같아야 한다 — 다르면 첫 질문에서 404가 난다
+    entrypoint: ["/bin/sh", "-c",
+      "ollama serve & sleep 5 && ollama pull ${GEN_MODEL:-hf.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF:Q4_K_M}"]
     profiles: ["init"]
 
   # 고객용 인스턴스 — 인터넷 노출. 관리 라우트가 아예 등록되지 않는다(망 분리).
