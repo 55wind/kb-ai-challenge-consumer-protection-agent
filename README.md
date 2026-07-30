@@ -8,8 +8,8 @@
 
 ## 핵심 특징
 
-- **100% 실데이터**: 금감원 분쟁조정 결정례 112건, 금소법·시행령·감독규정 217개 조문, 금융위·금감원 금소법 FAQ·설명자료·소비자 안내자료 167건, FINE 금융용어사전 534개 — 가상·합성 사례를 일절 사용하지 않으며, 스키마 차원에서 출처(source/source_url)를 강제
-- **완전 로컬 추론**: Ollama + EXAONE 3.5 2.4B (CPU, 4bit) — 민원 속 개인정보가 외부로 나가지 않음
+- **100% 실데이터**: 금감원 분쟁조정 결정례 112건, 금소법·시행령·감독규정 217개 조문, 금융위·금감원 금소법 FAQ·설명자료·소비자 안내자료·법령해석 회신사례 221건, FINE 금융용어사전 534개 — 가상·합성 사례를 일절 사용하지 않으며, 스키마 차원에서 출처(source/source_url)를 강제
+- **완전 로컬 추론**: Ollama + EXAONE 4.0 1.2B (4bit) — 민원 속 개인정보가 외부로 나가지 않음
 - **하이브리드 오케스트레이션**: 흐름 제어는 결정론적 코드, sLLM은 이해·생성만 담당 (소형 모델의 약점을 구조로 보완)
 - **근거 인용 강제**: 인용 없는 답변은 거부·재시도, 관련도 미달 시 추측 대신 "근거 없음" + 금감원 1332 안내
 - **책임 있는 전망**: 유사 사례의 인용/기각 분포를 사실 서술만 — 확률 수치 생성을 코드로 금지
@@ -36,13 +36,14 @@ python scripts/build_index.py && python scripts/build_graph.py
 
 ```bash
 .venv/Scripts/python -m pytest tests/ -q        # 207 tests
-.venv/Scripts/python scripts/eval_goldenset.py  # 검색 품질: 골든셋 81문항 hit@5 100%
+.venv/Scripts/python scripts/eval_goldenset.py  # 검색 품질: 골든셋 81문항 hit@4 98.8%
+.venv/Scripts/python scripts/audit_corpus.py    # 코퍼스·인덱스·그래프 정합 감사
 .venv/Scripts/python scripts/validate_corpus.py # 실데이터 출처 검증
 .venv/Scripts/python scripts/tune_retrieval.py  # 검색기 비중·RRF 상수 재측정
 .venv/Scripts/python scripts/compare_models.py  # 생성 모델 후보 비교 (라이선스 대응)
 ```
 
-골든셋 hit@5 100%는 **회귀 감시선이지 일반화 성능이 아니다.** 81문항은 코퍼스에서
+골든셋 hit@4 98.8%는 **회귀 감시선이지 일반화 성능이 아니다.** 81문항은 코퍼스에서
 뽑아 쓴 질문이고 RRF 상수 2개를 이 문항들로 골랐다. 코퍼스·모델을 바꿨을 때
 검색이 나빠졌는지 알아채는 용도로 쓴다.
 
@@ -68,7 +69,7 @@ web/            React 프론트 (/chat, /admin)
 
 ## 라이선스 유의
 
-현재 생성 모델 **EXAONE 3.5는 비상업(NC) 라이선스**다. 대회 참가는 라이선스에
+현재 생성 모델 **EXAONE 4.0 1.2B는 비상업(NC) 라이선스**다. 대회 참가는 라이선스에
 명시적으로 허용돼 있으나(제2.1(a)조), **상업 서비스 배포는 금지**된다(제3.1조).
 EXAONE 4.0도 같다. 실서비스로 전환하려면 상업 이용이 가능한 모델
 (Mi:dm 2.0 Mini — MIT, Kanana 1.5 — Apache 2.0)로 바꿔야 하며, `GEN_MODEL`
