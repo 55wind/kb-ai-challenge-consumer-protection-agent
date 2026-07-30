@@ -1,4 +1,4 @@
-"""골든셋 검색 평가: hit@3 / hit@5.
+"""골든셋 검색 평가: hit@1 ~ hit@5.
 
 골든셋은 실제 결정례·법령·절차·유권해석 문서 ID 기반이다 (창작 사례 없음).
 질문은 소비자가 쓸 법한 말로 새로 쓰되, **정답 ID는 반드시 코퍼스에 실재하는
@@ -9,9 +9,14 @@
 계속 돌고, 그 문항은 **영원히 맞출 수 없는 문항**이 된다. 점수가 떨어지면
 검색을 의심하게 되는데 원인은 골든셋에 있다. 그래서 먼저 실패시킨다.
 
-기준: hit@5 >= 0.97. 이 서비스에서 검색 실패는 "근거 없음"으로 이어져 답변이
-아예 나가지 않는다. 다섯 개를 보여주고도 못 찾는 일이 스무 번에 한 번이면
-취약 소비자에게는 너무 잦다.
+**기준은 hit@4다.** 앱이 답변 경로에서 실제로 쓰는 k가 4이기 때문이다
+(`orchestrator.py`의 `retrieve(kind, text, k=4)`). 예전에는 hit@3과 hit@5만 적었는데
+어느 쪽도 앱이 쓰는 값이 아니었다 — hit@3이 낮게 나오면 검색을 의심하게 되지만
+그 k로는 답변을 만들지 않고, hit@5는 실제보다 넉넉하다. 참고로 전 구간을 다 적는다.
+
+이 서비스에서 검색 실패는 "근거 없음"으로 이어져 답변이 아예 나가지 않는다.
+근거 넷을 보여주고도 못 찾는 일이 스무 번에 한 번이면 취약 소비자에게는 너무 잦다.
+그래서 기준을 0.97로 둔다.
 """
 import json
 import sys
@@ -61,7 +66,11 @@ def main() -> int:
         return 2
 
     per_kind: dict[str, list[int]] = defaultdict(list)
-    hit3 = hit5 = 0
+    # 앱이 답변 경로에서 실제로 쓰는 k는 4다(`orchestrator.py` — `retrieve(kind, text, k=4)`).
+    # 예전에는 hit@3과 hit@5만 적었는데, 어느 쪽도 앱이 쓰는 값이 아니었다. hit@3이
+    # 낮게 나오면 검색을 의심하게 되지만 그 k로는 답변을 만들지 않는다.
+    APP_K = 4
+    hits = {k: 0 for k in (1, 2, 3, 4, 5)}
     misses = []
     for e in entries:
         try:
@@ -69,26 +78,39 @@ def main() -> int:
         except NoEvidenceFound:
             ids = []
         expected = set(e["expected_ids"])
-        got3 = bool(expected & set(ids[:3]))
-        got5 = bool(expected & set(ids[:5]))
-        hit3 += got3
-        hit5 += got5
-        per_kind[e["kind"]].append(got5)
-        if not got5:
-            misses.append((e["kind"], e["query"], ids[:3]))
+        for k in hits:
+            hits[k] += bool(expected & set(ids[:k]))
+        got_app = bool(expected & set(ids[:APP_K]))
+        per_kind[e["kind"]].append(got_app)
+        if not got_app:
+            rank = [i + 1 for i, x in enumerate(ids) if x in expected]
+            misses.append((e["kind"], e["query"], ids[:APP_K], rank))
 
     n = len(entries)
-    print(f"골든셋 {n}문항 — hit@3: {hit3}/{n} ({hit3 / n:.1%}), "
-          f"hit@5: {hit5}/{n} ({hit5 / n:.1%})  [기준 {TARGET_HIT5:.0%}]")
+
+    def ci(h: int) -> str:
+        """윌슨 95% 신뢰구간. 100%에서도 구간이 1이 되지 않는다."""
+        z, p = 1.96, h / n
+        d = 1 + z * z / n
+        c = p + z * z / (2 * n)
+        s = (z * z / (4 * n * n) + p * (1 - p) / n) ** 0.5 * z / z
+        s = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5)
+        return f"[{(c - s) / d:.1%}, {(c + s) / d:.1%}]"
+
+    print(f"골든셋 {n}문항 — 기준 hit@{APP_K} >= {TARGET_HIT5:.0%}")
+    for k in sorted(hits):
+        mark = "  ← 앱이 답변에 쓰는 k" if k == APP_K else ""
+        print(f"  hit@{k}  {hits[k]:2d}/{n} = {hits[k] / n:6.1%}   95%CI {ci(hits[k])}{mark}")
+    print()
     for kind, results in sorted(per_kind.items()):
         ok = sum(results)
-        print(f"  {kind:<16} hit@5 {ok}/{len(results)} ({ok / len(results):.0%})")
+        print(f"  {kind:<16} hit@{APP_K} {ok}/{len(results)} ({ok / len(results):.0%})")
     if misses:
-        print("\n놓친 문항:")
-        for kind, q, got in misses:
+        print(f"\nhit@{APP_K}에서 놓친 문항:")
+        for kind, q, got, rank in misses:
             print(f"  [{kind}] {q[:44]}")
-            print(f"        → {got}")
-    return 0 if hit5 / n >= TARGET_HIT5 else 1
+            print(f"        정답 순위 {rank or '5위 밖'} · 상위: {got}")
+    return 0 if hits[APP_K] / n >= TARGET_HIT5 else 1
 
 
 if __name__ == "__main__":
