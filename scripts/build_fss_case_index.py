@@ -29,6 +29,7 @@ HWP 파서가 열지 못해 **34건의 미분석 파일 속에 묻혀 있었다.
 ("1.만성위염치료사실미고지로…"). 그래서 제목 대조는 **양쪽에서 공백을 모두
 제거하고** 한다. 은행편은 공백이 살아 있어 같은 규칙이 그대로 통한다.
 """
+import difflib
 import json
 import re
 import sys
@@ -143,6 +144,53 @@ def parse_volume(path: Path, volume: str, source: str) -> list[Entry]:
     return out
 
 
+# ── 본문 표제에서 원문 공백을 되찾는다 ──────────────────────────────
+#
+# 목차는 점선 리더 레이아웃 때문에 추출하면 공백이 사라진다
+# (`만성위염치료사실미고지로인한계약해지의적정성여부`). 그런데 **본문의 사례 표제에는
+# 공백이 살아 있다** —
+#
+#     1-5 건강검진상 유방결절 소견 미고지가 계약전 알릴의무 위반인지 여부[기각]
+#
+# 공백을 지운 형태로 대조하면 1:1로 붙는다. 데이터를 만드는 것이 아니라 **우리가
+# 목차 파싱에서 버린 공백을 원본에서 되찾는 것**이다.
+#
+# 왜 하는가: 이 제목이 분류 정답지의 질의가 된다. 공백이 없으면 임베딩도 sLLM도
+# 낱말 경계를 못 잡는다. 실측에서 상품유형 top-1이 94.9% → 95.4%였다.
+_BODY_HEAD = re.compile(
+    r"(\d{1,2})-(\d{1,3})\s+([^\[\]\n]{6,90}?)\s*"
+    r"\[(인용|기각|일부인용|합의권고|각하|중지|성립|불성립)\]"
+)
+# 자간을 벌려 조판한 표제("직 업 의 변 경 에")는 복원 실패로 본다 — 낱말 경계가
+# 오히려 망가진다.
+_LETTER_SPACED = re.compile(r"(?:\S ){4,}")
+
+
+def _key(s: str) -> str:
+    return re.sub(r"[\s·․‧,()（）]", "", s)
+
+
+def recover_spacing(entries: list[Entry], full_text: str) -> int:
+    """본문 표제에서 공백을 되찾아 `entries`의 title을 갈아끼운다. 복원 건수를 돌려준다."""
+    body: dict[str, str] = {}
+    for m in _BODY_HEAD.finditer(full_text):
+        t = re.sub(r"\s+", " ", m.group(3)).strip()
+        if not _LETTER_SPACED.search(t):
+            body.setdefault(_key(t), t)
+    fixed = 0
+    for e in entries:
+        k = _key(e.title)
+        cand = body.get(k)
+        if cand is None:
+            # 목차와 본문의 오탈자 차이만 흡수한다(유방결정↔유방결절, 미세침흡입↔흡인).
+            near = difflib.get_close_matches(k, list(body), n=1, cutoff=0.93)
+            cand = body[near[0]] if near else None
+        if cand and cand != e.title:
+            e.title = cand
+            fixed += 1
+    return fixed
+
+
 def main() -> int:
     all_entries: list[Entry] = []
     for fname, volume, source in VOLUMES:
@@ -151,8 +199,11 @@ def main() -> int:
             print(f"  [건너뜀] 원본 없음: {fname}")
             continue
         entries = parse_volume(path, volume, source)
+        full = "\n".join((p.extract_text() or "") for p in PdfReader(path).pages)
+        fixed = recover_spacing(entries, full)
         chapters = {e.chapter for e in entries if e.chapter}
-        print(f"  {volume}: 사례 {len(entries)}건 · 장 {len(chapters)}종")
+        print(f"  {volume}: 사례 {len(entries)}건 · 장 {len(chapters)}종 · "
+              f"공백 복원 {fixed}건 ({fixed / max(len(entries), 1):.0%})")
         all_entries.extend(entries)
 
     OUT.write_text(
