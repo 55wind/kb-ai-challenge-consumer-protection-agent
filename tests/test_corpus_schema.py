@@ -119,3 +119,46 @@ def test_fss_case_index_is_present_and_labeled_by_the_regulator():
     assert len(rows) >= 300, f"사례집 색인이 {len(rows)}건뿐이다 — 목차 파싱이 깨졌다"
     assert all(r["source"].startswith("금융감독원") for r in rows)
     assert len({r["chapter"] for r in rows}) >= 15, "금감원 분류 체계가 덜 잡혔다"
+
+
+def test_no_duplicate_ids_in_any_corpus():
+    """어느 코퍼스에도 id가 겹치면 안 된다.
+
+    `retriever._get_records`가 `{r.id: r}` dict라 **겹치면 하나가 다른 하나를
+    덮어쓴다.** 인덱스에는 두 벡터가 다 남으므로 검색은 되는데, 조회에서 엉뚱한
+    레코드가 나온다.
+
+    실제로 났던 일: KB 예금거래기본약관의 `제9조`와 `제9조의2`가 같은 id를
+    받았다(라벨 정규식이 가지번호 `의2`를 버렸다). 그 결과 제9조(이자)는
+    검색에서 사라졌고, 제9조 벡터에 맞은 질의에 **제9조의2(휴면예금) 본문이
+    인용문으로** 나갔다. 근거를 보여준다는 이 시스템의 약속이 깨지는 자리다.
+    """
+    from collections import Counter
+
+    for kind in ("laws", "cases", "interpretations", "procedures", "kb_products"):
+        ids = [r.id for r in load_corpus(kind)]
+        dup = [i for i, c in Counter(ids).items() if c > 1]
+        assert not dup, f"{kind}에 중복 id: {dup}"
+
+
+def test_index_ids_match_corpus():
+    """인덱스가 코퍼스와 같은 문서를 담고 있어야 한다.
+
+    코퍼스만 다시 만들고 인덱스를 안 만들면 검색이 사라진 id를 돌려주고
+    `_get_records[rid]`에서 KeyError가 난다 — 사용자에게는 500이다.
+    개수가 같아도 집합이 다르면 같은 일이 나므로 집합으로 본다.
+    """
+    import json
+
+    from app.config import settings
+
+    for kind in ("laws", "cases", "interpretations", "procedures", "kb_products"):
+        path = settings.INDEX_DIR / f"{kind}.ids.json"
+        if not path.exists():
+            continue  # 인덱스 미빌드 환경(CI 등)에서는 건너뛴다
+        indexed = set(json.loads(path.read_text(encoding="utf-8")))
+        corpus = {r.id for r in load_corpus(kind)}
+        assert indexed == corpus, (
+            f"{kind}: 색인에만 {sorted(indexed - corpus)[:3]} · "
+            f"코퍼스에만 {sorted(corpus - indexed)[:3]}"
+        )

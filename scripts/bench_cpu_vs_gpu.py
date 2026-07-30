@@ -10,10 +10,15 @@ Ollama가 응답에 실어주는 나노초 카운터를 쓴다 — 벽시계로 
 import io
 import statistics
 import sys
+from pathlib import Path
 
 import httpx
 
-from app.config import settings
+# 다른 스크립트와 같은 방식으로 저장소 뿌리를 경로에 넣는다 — 없으면
+# `python scripts/bench_cpu_vs_gpu.py`가 app을 못 찾는다.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.config import settings  # noqa: E402
 
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")

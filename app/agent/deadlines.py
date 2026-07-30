@@ -299,6 +299,10 @@ def compute_deadlines(
                 if rule and rule.action not in seen:
                     rules.append(rule)
                     seen.add(rule.action)
+                    # 상품유형이 확정한 카드다. 2순위 유형에도 같은 카드가 있었다는
+                    # 이유로 「해당될 수 있음」을 달면, 조문이 정한 기간을 추측처럼
+                    # 보여주게 된다 — 근거의 무게가 다르다.
+                    tentative_actions.discard(rule.action)
     event = parse_event_date(when_text or "", today)
     items: list[DeadlineItem] = []
     for rule in rules:

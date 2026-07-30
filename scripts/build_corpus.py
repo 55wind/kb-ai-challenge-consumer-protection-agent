@@ -12,6 +12,7 @@ import csv
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -349,9 +350,16 @@ def build_kb_products() -> None:
             chunks = []
             for part in parts:
                 part = part.strip()
-                m = re.match(r"제\s*(\d+)\s*조", part)
+                # `의2` 가지번호까지 잡아야 한다. 분할 정규식은 `제9조의2`를
+                # 알아보는데 라벨에서 `의2`를 버리면 제9조와 제9조의2가 같은
+                # id를 갖는다. 그러면 `_get_records`가 dict라 **하나가 다른
+                # 하나를 덮어쓴다** — 실제로 예금거래기본약관 제9조(이자)가
+                # 검색에서 사라지고, 그 벡터에 맞아도 제9조의2(휴면예금) 본문이
+                # 인용문으로 나갔다. 근거와 인용이 어긋나는 상태였다.
+                m = re.match(r"제\s*(\d+)\s*조(?:\s*의\s*(\d+))?", part)
                 if m and len(part) >= 40:
-                    chunks.append((f"제{m.group(1)}조", part[:3000]))
+                    section = f"제{m.group(1)}조" + (f"의{m.group(2)}" if m.group(2) else "")
+                    chunks.append((section, part[:3000]))
         else:
             paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if len(p.strip()) >= 80]
             body = "\n".join(paragraphs) if paragraphs else text
@@ -370,6 +378,12 @@ def build_kb_products() -> None:
                 source=f"KB국민은행 {product_name} ({doc_type})",
                 source_url="https://obank.kbstar.com/quics?page=C022180",
             ))
+    # id가 겹치면 검색은 되는데 조회에서 하나가 사라진다(`_get_records`가 dict다).
+    # 조용히 지나가면 인용문이 검색된 문서와 달라지므로 여기서 멈춘다.
+    dup = [i for i, c in Counter(r.id for r in records).items() if c > 1]
+    if dup:
+        raise SystemExit(f"kb_products id 중복: {dup} — 조항 라벨 규칙을 확인하세요")
+
     settings.CORPUS_DIR.mkdir(parents=True, exist_ok=True)
     out = settings.CORPUS_DIR / "kb_products.jsonl"
     with out.open("w", encoding="utf-8") as f:

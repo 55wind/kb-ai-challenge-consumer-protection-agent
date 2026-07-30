@@ -238,3 +238,22 @@ def test_alt_category_same_as_category_is_noop():
     same = compute_deadlines("보험", "2026년 7월 20일", today=TODAY, alt_category="보험")
     assert [i.action for i in base] == [i.action for i in same]
     assert not any(i.tentative for i in same)
+
+
+def test_product_type_confirmed_card_is_not_marked_tentative(monkeypatch):
+    """상품유형이 확정한 청약철회는 2순위와 겹쳐도 확정으로 남는다.
+
+    제46조①이 기간을 정한 카드다. 2순위 유형에도 같은 카드가 있었다는 이유로
+    「해당될 수 있음」을 달면 조문이 정한 기간을 추측처럼 보여주게 된다.
+    """
+    from app.agent import deadlines as dl
+    from app.agent import product_type
+
+    monkeypatch.setattr(product_type, "infer", lambda t, top=2: ["보장성 상품"])
+    items = dl.compute_deadlines(
+        "불완전판매", "2026년 7월 20일", today=TODAY,
+        situation_text="보험 가입할 때 설명을 못 들었어요", alt_category="보험",
+    )
+    card = next(i for i in items if "보장성 상품 청약철회" in i.action)
+    assert not card.tentative, "상품유형이 정한 카드가 추측으로 표시됐다"
+    assert "해당될 경우" not in card.urgency_note

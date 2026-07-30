@@ -31,7 +31,7 @@
 반영: python scripts/collect_fsc_interpretations.py --merge    (코퍼스에 병합)
 """
 import argparse
-import io
+import html
 import json
 import re
 import sys
@@ -86,26 +86,37 @@ class Reply:
     department: str
 
 
-def clean(html: str) -> str:
-    html = re.sub(r"(?is)<(script|style).*?</\1>", " ", html)
-    html = re.sub(r"(?i)<br\s*/?>", "\n", html)
-    html = re.sub(r"(?i)</(p|div|li|tr|h\d)>", "\n", html)
-    text = TAG.sub("", html).replace("&nbsp;", " ").replace("&amp;", "&")
+def clean(raw: str) -> str:
+    raw = re.sub(r"(?is)<(script|style).*?</\1>", " ", raw)
+    raw = re.sub(r"(?i)<br\s*/?>", "\n", raw)
+    raw = re.sub(r"(?i)</(p|div|li|tr|h\d)>", "\n", raw)
+    # `&lsquo;`·`&middot;` 등이 그대로 남으면 근거 화면에 실체참조가 노출된다.
+    # 개별 치환이 아니라 표준 해제를 쓴다 — 목록을 우리가 관리하면 반드시 빠진다.
+    text = html.unescape(TAG.sub("", raw))
     return re.sub(r"[ \t]+", " ", text)
+
+
+# 상세 페이지 상단의 표 범례. 여기에도 '질의요지, 회답, 이유'가 낱말로 들어 있어
+# 구간 추출이 범례를 본문으로 착각한다. 범례 뒤부터 보면 그 혼동이 사라진다.
+_LEGEND = re.compile(r"(?:로 이루어짐|으로 구성)")
 
 
 def section(text: str, start: str, ends: tuple[str, ...]) -> str:
     """`start` 다음부터 `ends` 중 가장 먼저 오는 것 전까지.
 
-    표 범례에도 '질의요지'가 나오므로 **마지막** 출현을 기준으로 한다 — 범례는
-    본문보다 앞에 있다.
+    처음에는 `rfind`(마지막 출현)를 썼다. 범례가 본문보다 앞에 있다고 봤기
+    때문인데, **본문 안에서도 '질의요지'가 다시 나온다** — 실제로 회답 본문이
+    "…에서 주어진 사정만으로는"처럼 중간부터 잘려 나왔다. 범례를 먼저 잘라내고
+    **첫 출현**을 쓰는 것이 맞다.
     """
-    i = text.rfind(start)
+    m = _LEGEND.search(text)
+    body = text[m.end():] if m else text
+    i = body.find(start)
     if i < 0:
         return ""
     i += len(start)
-    stops = [p for p in (text.find(e, i) for e in ends) if p > 0]
-    return text[i: min(stops) if stops else len(text)].strip()
+    stops = [p for p in (body.find(e, i) for e in ends) if p > 0]
+    return body[i: min(stops) if stops else len(body)].strip()
 
 
 _LAW_ALIAS = {
