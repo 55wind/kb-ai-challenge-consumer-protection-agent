@@ -326,8 +326,13 @@ def _dispute_flow(state: SessionState, text: str, llm: OllamaClient) -> Iterator
         yield AgentEvent("answer", {"text": question})
         return
 
+    # 청약철회 카드는 민원 유형이 아니라 **상품유형**으로 고른다(제46조①).
+    # 사용자가 실제로 쓴 말을 넘겨 상품유형을 추정하게 한다 — 분류가 흔들려도
+    # 청약철회 안내가 사라지지 않도록. 근거는 deadlines.compute_deadlines 설명.
     deadline_items = deadlines_mod.compute_deadlines(
-        state.category, slots.filled.get("when", "")
+        state.category, slots.filled.get("when", ""),
+        situation_text=text or " ".join(
+            v for k, v in slots.filled.items() if k != "when"),
     )
     if deadline_items:
         yield AgentEvent(

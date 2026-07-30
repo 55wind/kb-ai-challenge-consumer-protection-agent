@@ -158,3 +158,47 @@ def test_withdrawal_period_matches_the_statute_per_product_type():
         assert hits, f"'{category}'에 청약철회 카드가 없다"
         rule = next(r for r in hits if kind in r.action)
         assert rule.days == days, f"{kind} 청약철회가 {rule.days}일 — 제46조는 {days}일"
+
+
+def test_withdrawal_card_follows_product_type_not_complaint_category(monkeypatch):
+    """청약철회는 민원 유형이 아니라 상품유형(금소법 제3조)으로 골라야 한다.
+
+    제46조①이 상품유형별로 기간을 정한다 — 1호 보장성 15일, 2호 투자성 7일,
+    3호 대출성 14일. 그런데 예전에는 `classifier.CATEGORIES` 10종으로 골랐다.
+    그 10종은 상품 축과 위반 축을 섞어 놓아 배타적이 아니고(보험 불완전판매
+    사건은 둘 다다) 금감원 라벨 기준 정확도가 62.5%였다. 유형을 잘못 집으면
+    해당하는 청약철회 카드가 사라진다.
+
+    상품유형 축 하나만 보면 정답 포함률이 96.0%다. 이 테스트는 유형이 틀려도
+    상황 텍스트로 올바른 청약철회 카드가 붙는지 본다.
+    """
+    from app.agent import deadlines as dl
+    from app.agent import product_type
+
+    # 민원 유형은 '대출·금리'로 잘못 분류됐지만, 상황은 보험 사건이다.
+    monkeypatch.setattr(product_type, "infer", lambda t, top=2: ["보장성 상품", "투자성 상품"])
+    monkeypatch.setattr(dl, "_law_citation", lambda q: None)
+    items = dl.compute_deadlines("대출·금리", "", situation_text="보험금을 안 준대요")
+    actions = [i.action for i in items]
+
+    assert any("보장성 상품 청약철회" in a for a in actions), (
+        f"상품유형이 보장성인데 보장성 청약철회가 없다: {actions}")
+    assert not any("대출성 상품 청약철회" in a for a in actions), (
+        f"민원 유형(대출·금리)에서 온 청약철회가 남아 있다: {actions}")
+    # 위법계약해지는 유형과 무관하게 항상 남아야 한다
+    assert any("위법계약 해지" in a for a in actions)
+
+
+def test_deadlines_survive_product_type_failure(monkeypatch, capsys):
+    """상품유형 추정이 실패해도 기한 안내는 나가야 한다."""
+    from app.agent import deadlines as dl
+    from app.agent import product_type
+
+    def boom(text, top=2):
+        raise RuntimeError("임베딩 모델 없음")
+
+    monkeypatch.setattr(product_type, "infer", boom)
+    monkeypatch.setattr(dl, "_law_citation", lambda q: None)
+    items = dl.compute_deadlines("불완전판매", "", situation_text="펀드 손실")
+    assert items, "추정 실패로 기한 안내가 통째로 사라졌다"
+    assert "상품유형 추정 실패" in capsys.readouterr().out

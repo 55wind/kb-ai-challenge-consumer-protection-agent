@@ -118,8 +118,11 @@ def test_dispute_flow_emits_deadlines_before_outlook(monkeypatch):
                         lambda d, llm: Slots(filled=full, missing=[]))
     monkeypatch.setattr(
         orchestrator.deadlines_mod, "compute_deadlines",
-        lambda cat, when: [DeadlineItem(action="지급정지", period="즉시", computed_deadline=None,
-                                        urgency="urgent", law_citation=None, urgency_note="지금")],
+        # situation_text를 함께 받는다 — 청약철회는 민원 유형이 아니라 상품유형으로
+        # 고르기 때문이다(deadlines.compute_deadlines 설명 참조).
+        lambda cat, when, situation_text=None: [
+            DeadlineItem(action="지급정지", period="즉시", computed_deadline=None,
+                         urgency="urgent", law_citation=None, urgency_note="지금")],
     )
     monkeypatch.setattr(orchestrator.case_outlook, "outlook",
                         lambda s, llm: Outlook(similar=[], stats={"인용": 0, "일부인용": 0, "기각": 0},

@@ -233,11 +233,51 @@ def _law_citation(query: str) -> Citation | None:
     )
 
 
+# 상품유형(금소법 제3조) → 청약철회 룰. 제46조①이 유형별로 기간을 달리 정한다.
+WITHDRAWAL_BY_PRODUCT: dict[str, DeadlineRule] = {
+    "보장성 상품": RULES["보험"][0],
+    "투자성 상품": RULES["투자상품"][0],
+    "대출성 상품": RULES["대출·금리"][0],
+    # 예금성 상품은 제46조① 각 호에 없다 — 청약철회 대상이 아니다.
+}
+
+
 def compute_deadlines(
-    category: str, when_text: str, today: date | None = None
+    category: str, when_text: str, today: date | None = None,
+    situation_text: str | None = None,
 ) -> list[DeadlineItem]:
+    """법정 기한 카드. 청약철회는 **민원 유형이 아니라 상품유형**으로 고른다.
+
+    제46조①은 상품유형별로 기간을 정한다(보장성 15일·투자성 7일·대출성 14일).
+    그런데 예전에는 `classifier.CATEGORIES` 10종으로 골랐다. 그 10종은 상품 축과
+    위반 축을 섞어 놓아 배타적이지 않고, 금감원 라벨 기준 정확도가 62.5%였다.
+    유형을 잘못 집으면 해당하는 청약철회 카드가 사라진다.
+
+    상품유형 축 하나만 보면 정답 포함률이 96.0%다(`product_type.infer`, 상위 2개).
+    그래서 `situation_text`가 주어지면 그것으로 상품유형을 추정해 청약철회 카드를
+    붙인다. 없으면 예전처럼 민원 유형으로 고른다 — 기존 호출부와 테스트를 깨지
+    않기 위해서다.
+    """
     today = today or date.today()
     rules = RULES.get(category, []) + RULES["_common"]
+
+    if situation_text:
+        from app.agent import product_type
+
+        try:
+            kinds = product_type.infer(situation_text)
+        except Exception as e:  # noqa: BLE001 - 임베딩 실패가 기한 안내를 막아선 안 된다
+            print(f"[product_type] 상품유형 추정 실패 — 민원 유형으로 대체합니다: "
+                  f"{type(e).__name__}: {e}", flush=True)
+        else:
+            # 청약철회는 상품유형이 정한다. 유형 기반으로 붙어 있던 것은 걷어낸다.
+            rules = [r for r in rules if "청약철회" not in r.action]
+            seen = {r.action for r in rules}
+            for k in kinds:
+                rule = WITHDRAWAL_BY_PRODUCT.get(k)
+                if rule and rule.action not in seen:
+                    rules.append(rule)
+                    seen.add(rule.action)
     event = parse_event_date(when_text or "", today)
     items: list[DeadlineItem] = []
     for rule in rules:
