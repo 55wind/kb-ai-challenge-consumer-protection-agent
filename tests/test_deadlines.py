@@ -287,3 +287,31 @@ def test_law_citation_is_cached(monkeypatch):
     dl.compute_deadlines("보험", "2026년 7월 20일", today=TODAY)
     assert len(calls) == first, f"같은 질의로 검색을 다시 돌렸다 ({first} → {len(calls)})"
     dl._law_citation.cache_clear()
+
+
+# ── 슬롯 추출기가 정규화한 날짜를 읽는다 ─────────────────────────
+def test_parses_iso_and_dotted_dates_from_slot_extractor():
+    """`2026-07-26` 형태를 읽어야 한다 — sLLM이 그렇게 정규화해서 돌려준다.
+
+    실제로 났던 일이다. 사용자가 "보험을 2026년 7월 26일에 들었는데"라고 썼고
+    슬롯 추출기가 `{"when": "2026-07-26"}`을 냈는데, 파서가 한글 표기만 알아서
+    기한이 전부 `unknown`이 됐다. 화면에는 "시기를 알려주시면 남은 기한을 계산해
+    드립니다"가 떴다 — **사용자는 시기를 말했는데도.**
+
+    이 시스템이 막으려는 실패(법정 기한을 놓치는 것)가 시스템 안에서 나는 자리다.
+    """
+    for text in ("2026-07-26", "2026.7.26", "2026/07/26", "2026-07-26에 가입"):
+        assert parse_event_date(text, TODAY) == date(2026, 7, 26), text
+    # 일자가 없으면 그 달 1일로 — 보수적으로 기한이 먼저 도래한다
+    assert parse_event_date("2026-07", TODAY) == date(2026, 7, 1)
+    # 숫자 뭉치를 아무거나 날짜로 읽지 않는다
+    assert parse_event_date("2026년", TODAY) is None
+    assert parse_event_date("기억이 안 나요", TODAY) is None
+
+
+def test_iso_date_actually_produces_a_computed_deadline():
+    """파싱만이 아니라 카드에 계산된 기한이 실제로 실려야 한다."""
+    items = compute_deadlines("보험", "2026-07-26", today=TODAY)
+    card = next(i for i in items if "청약철회" in i.action)
+    assert card.computed_deadline, "날짜를 줬는데 기한이 계산되지 않았다"
+    assert card.urgency in ("urgent", "ok", "expired"), card.urgency

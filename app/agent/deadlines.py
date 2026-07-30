@@ -177,6 +177,17 @@ _URGENCY_ORDER = {"urgent": 0, "ok": 1, "unknown": 2, "expired": 3}
 def parse_event_date(when_text: str, today: date) -> date | None:
     t = when_text.strip()
 
+    # `2026-07-26` · `2026.7.26` · `2026/07/26`
+    #
+    # 사용자가 이렇게 쓰는 일도 있지만, 더 흔한 경로는 **슬롯 추출기**다. sLLM은
+    # "2026년 7월 26일에 들었는데"를 `{"when": "2026-07-26"}`으로 정규화해서 돌려준다.
+    # 이 형태를 못 읽으면, 사용자가 날짜를 분명히 말했는데도 기한이 `unknown`이 되어
+    # "시기를 알려주시면 남은 기한을 계산해 드립니다"가 뜬다 — 이 시스템이 막으려는
+    # 실패가 시스템 안에서 나는 것이다. 실제로 그렇게 나고 있었다.
+    m = re.search(r"(\d{4})\s*[-./]\s*(\d{1,2})(?:\s*[-./]\s*(\d{1,2}))?(?!\s*\d)", t)
+    if m:
+        return _safe_date(int(m.group(1)), int(m.group(2)), int(m.group(3) or 1))
+
     m = re.search(r"(\d{4})\s*년\s*(\d{1,2})\s*월(?:\s*(\d{1,2})\s*일)?", t)
     if m:
         y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3) or 1)
